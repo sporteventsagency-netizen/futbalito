@@ -6,7 +6,7 @@ import {
     Standing, PortalConfig, PublicConfig, NationalTeam, NationalSquadPlayer, Comment
 } from '../types.ts';
 import { 
-    mockTeams, mockMatches, mockPlayers, mockOrganizationSettings,
+    mockMatches, mockPlayers, mockOrganizationSettings,
     mockUsers, mockRoles, mockInvoices, mockAuditLog, mockCounties, mockArenas,
     mockSanctions, mockReferees, mockObservers, mockSports, mockArticles, mockMediaImages,
     mockGalleries, mockSponsors, mockTransfers, mockPlayerRegistrations, mockPortalConfig,
@@ -122,7 +122,7 @@ const CompetitionContext = createContext<CompetitionContextType | undefined>(und
 
 export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     // All state managed here
-    const [teams, setTeams] = useState<Team[]>(mockTeams);
+    const [teams, setTeams] = useState<Team[]>([]);
     const [competitions, setCompetitions] = useState<Competition[]>([]);
     const [matches, setMatches] = useState<Match[]>([...mockMatches, ...MOCK_INTERNATIONAL_MATCHES]);
     const [players, setPlayers] = useState<Player[]>(mockPlayers);
@@ -152,44 +152,49 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     useEffect(() => {
         let isMounted = true;
     
-        const fetchCompetitions = async () => {
+        const fetchInitialData = async () => {
             const supabase = getSupabase();
-            const { data, error } = await supabase
+            
+            // Fetch Competitions
+            const { data: competitionsData, error: competitionsError } = await supabase
                 .from('competitions')
-                .select('*, competition_teams(team_id)') // Fetch related team IDs from join table
+                .select('*, competition_teams(team_id)')
                 .order('created_at', { ascending: false });
     
-            if (error) {
-                console.error('[Supabase] Error fetching competitions:', error);
-                return;
+            if (competitionsError) {
+                console.error('[Supabase] Error fetching competitions:', competitionsError);
+            } else if (isMounted) {
+                const normalizedCompetitions = (competitionsData ?? []).map((row: any) => ({
+                    id: row.id,
+                    name: row.name,
+                    season: row.season,
+                    logoUrl: row.logo_url ?? '',
+                    status: row.status ?? 'Upcoming',
+                    format: row.format ?? 'league',
+                    twoLegged: row.two_legged ?? false,
+                    teamsPerGroup: row.teams_per_group ?? 4,
+                    defaultArenaId: row.default_arena_id ?? undefined,
+                    isPublic: row.is_public ?? false,
+                    county: row.county ?? undefined,
+                    sportId: row.sport_id ?? undefined,
+                    pointsForWin: row.points_for_win ?? 3,
+                    pointsForTieBreakWin: row.points_for_tie_break_win ?? 2,
+                    publicConfig: row.public_config ?? {},
+                    teamIds: row.competition_teams ? row.competition_teams.map((ct: { team_id: string }) => ct.team_id) : [],
+                }));
+                setCompetitions(normalizedCompetitions as Competition[]);
             }
-            if (!isMounted) return;
-    
-            const normalized = (data ?? []).map((row: any) => ({
-                id: row.id,
-                name: row.name,
-                season: row.season,
-                logoUrl: row.logo_url ?? '',
-                status: row.status ?? 'Upcoming',
-                format: row.format ?? 'league',
-                twoLegged: row.two_legged ?? false,
-                teamsPerGroup: row.teams_per_group ?? 4,
-                defaultArenaId: row.default_arena_id ?? undefined,
-                isPublic: row.is_public ?? false,
-                county: row.county ?? undefined,
-                sportId: row.sport_id ?? undefined,
-                pointsForWin: row.points_for_win ?? 3,
-                pointsForTieBreakWin: row.points_for_tie_break_win ?? 2,
-                publicConfig: row.public_config ?? {},
-                // Map the fetched team IDs from the nested structure
-                teamIds: row.competition_teams ? row.competition_teams.map((ct: { team_id: string }) => ct.team_id) : [],
-            }));
-    
-            setCompetitions(normalized as Competition[]);
-            console.log('[Supabase] competitions (normalized):', normalized);
+
+            // Fetch Teams
+            const { data: teamsData, error: teamsError } = await supabase.from('teams').select('*').order('name');
+            if(teamsError) {
+                console.error('[Supabase] Error fetching teams:', teamsError);
+            } else if (isMounted) {
+                setTeams(teamsData as Team[]);
+            }
         };
     
-        fetchCompetitions();
+        fetchInitialData();
         return () => { isMounted = false; };
     }, []);
 
@@ -288,6 +293,7 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     
                 if (insertError) {
                     console.error('[Supabase] insert competition error:', insertError);
+                    alert(`Failed to save competition: ${insertError.message}\n\nHint: Check if the 'competitions' table has an INSERT policy enabled in Supabase for all users.`);
                     setCompetitions(prev => prev.filter(c => c.id !== tempId)); // Revert optimistic update
                     return;
                 }
@@ -298,12 +304,17 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
                         team_id: teamId,
                     }));
                     const { error: joinError } = await supabase.from('competition_teams').insert(competitionTeamsPayload);
-                    if (joinError) console.error('[Supabase] insert competition_teams error:', joinError);
+                    if (joinError) {
+                        console.error('[Supabase] insert competition_teams error:', joinError);
+                        alert(`Competition was created, but failed to add teams: ${joinError.message}\n\nHint: Check if the 'competition_teams' table has an INSERT policy enabled in Supabase for all users.`);
+                    }
                 }
     
                 setCompetitions(prev => prev.map(c => c.id === tempId ? { ...c, id: inserted.id, logoUrl: inserted.logo_url ?? c.logoUrl } : c));
-            } catch (e) {
+            } catch (e: any) {
                 console.error('[Supabase] unexpected insert error:', e);
+                alert(`An unexpected error occurred: ${e.message}`);
+                setCompetitions(prev => prev.filter(c => c.id !== tempId)); // Revert optimistic update
             }
         })();
     };
@@ -354,8 +365,6 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
             const { error } = await supabase.from('competitions').delete().match({ id });
             if (error) {
                 console.error('[Supabase] Error deleting competition:', error);
-                // Simple revert by re-fetching. A more robust solution might be needed.
-                // For now, an alert is sufficient to inform the user.
                 alert('Failed to delete competition from the database. Please refresh.');
             }
         })();

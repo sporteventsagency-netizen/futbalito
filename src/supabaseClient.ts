@@ -4,45 +4,48 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 let supabaseInstance: SupabaseClient | null = null;
 
 /**
- * Initializes and returns a singleton Supabase client instance.
- * This final version throws a highly instructional error to guide the user
- * in correctly setting up their environment secrets.
+ * A robust, adaptive Supabase client initializer.
+ * It checks for environment variables in multiple common patterns to avoid
+ * environment-specific configuration issues, thus breaking the auto-fix loop.
  */
 export const getSupabase = (): SupabaseClient => {
     if (supabaseInstance) {
         return supabaseInstance;
     }
 
-    // Standard names for Supabase secrets.
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+    // --- Adaptive Secret Discovery ---
+    // This logic attempts to find the Supabase secrets using all common naming conventions
+    // for different environments (Vercel, Vite local, other Node-like environments).
+    // It uses the first valid configuration it finds.
     
-    // Vercel-specific names for Supabase secrets.
-    const vercelSupabaseUrl = process.env.VITE_SUPABASE_URL;
-    const vercelSupabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
+    // Vercel/Vite standard way (import.meta.env with VITE_ prefix)
+    const url1 = (import.meta as any).env?.VITE_SUPABASE_URL;
+    const key1 = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
 
-    const finalUrl = supabaseUrl || vercelSupabaseUrl;
-    const finalKey = supabaseAnonKey || vercelSupabaseAnonKey;
+    // Standard Node.js way (process.env with VITE_ prefix)
+    const url2 = (typeof process !== 'undefined' && process.env) ? process.env.VITE_SUPABASE_URL : undefined;
+    const key2 = (typeof process !== 'undefined' && process.env) ? process.env.VITE_SUPABASE_ANON_KEY : undefined;
 
-    // If secrets are still not found after checking all common names, throw the final instructional error.
+    // Standard Node.js way (process.env without prefix)
+    const url3 = (typeof process !== 'undefined' && process.env) ? process.env.SUPABASE_URL : undefined;
+    const key3 = (typeof process !== 'undefined' && process.env) ? process.env.SUPABASE_ANON_KEY : undefined;
+
+    const finalUrl = url1 || url2 || url3;
+    const finalKey = key1 || key2 || key3;
+
     if (!finalUrl || !finalKey) {
+        // If no secrets are found after checking all patterns, provide a clear diagnostic error.
         throw new Error(
-`URGENT: Supabase secrets are NOT configured correctly in this environment.
+`DIAGNOSTIC ERROR: Supabase secrets not found.
+
+I checked for secrets named 'VITE_SUPABASE_URL' and 'SUPABASE_URL' but could not find them.
 
 ACTION REQUIRED:
-1. Find the "Secrets" panel for this project on the platform you are currently using.
-2. DELETE any existing secrets related to Supabase to start fresh.
-3. Create TWO new secrets with these EXACT names and values:
+Please ensure that in your deployment environment (e.g., Vercel), you have correctly set ONE of the following pairs of environment variables:
+1. VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (Recommended for Vercel/Vite)
+2. SUPABASE_URL and SUPABASE_ANON_KEY
 
-   - Secret Name: SUPABASE_URL
-   - Secret Value: [Paste your Supabase URL from Project Settings -> API]
-   
-   - Secret Name: SUPABASE_ANON_KEY
-   - Secret Value: [Paste your Supabase 'anon' 'public' key from Project Settings -> API]
-
-4. Save the secrets. If the platform has a "Restart" or "Redeploy" button for the development environment, use it.
-
-The application cannot connect to the database until this is fixed.`
+The application cannot start without a valid connection to the database.`
         );
     }
 

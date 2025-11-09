@@ -18,7 +18,8 @@ const romanianCounties = [
 
 interface TeamFormProps {
   team?: Team | null;
-  onSave: (data: any) => void;
+  // FIX: Replace 'any' with a specific type for better type safety.
+  onSave: (data: Omit<Team, 'id' | 'logoUrl'> & { logoFile?: File | null }) => void;
   onClose: () => void;
 }
 

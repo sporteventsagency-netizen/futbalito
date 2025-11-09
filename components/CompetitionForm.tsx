@@ -10,7 +10,8 @@ import { PlusIcon, XMarkIcon } from './icons/Icons.tsx';
 
 interface CompetitionFormProps {
   competition?: Competition | null;
-  onSave: (data: any) => void;
+  // FIX: Replace 'any' with a specific type for better type safety.
+  onSave: (data: Omit<Competition, 'id' | 'logoUrl' | 'status'> & { logoFile?: File | null }) => void;
   onClose: () => void;
 }
 

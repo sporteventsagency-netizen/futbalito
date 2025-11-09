@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 // FIX: Added .ts extension to module import.
-import type { OrganizationSettings, User, Role, Page, County } from '../types.ts';
+import type { OrganizationSettings, User, Role, Page } from '../types.ts';
 import Card from '../components/ui/Card.tsx';
 // FIX: Added .tsx extension to module import to resolve module resolution error.
 import Button from '../components/ui/Button.tsx';
@@ -10,7 +10,6 @@ import Tabs from '../components/ui/Tabs.tsx';
 import Modal from '../components/ui/Modal.tsx';
 import UserForm from '../components/UserForm.tsx';
 import RoleForm from '../components/RoleForm.tsx';
-import CountyForm from '../components/CountyForm.tsx';
 // FIX: Added .tsx extension to module import.
 import { PlusIcon, CreditCardIcon, DocumentTextIcon, ArrowTopRightOnSquareIcon } from '../components/icons/Icons.tsx';
 // FIX: Added .tsx extension to module import.
@@ -27,8 +26,7 @@ const Settings: React.FC<SettingsProps> = ({ setPage }) => {
         organizationSettings, updateOrganizationSettings, 
         users, inviteUser, updateUser, deleteUser,
         roles, addRole, updateRole, deleteRole,
-        invoices, auditLog,
-        counties, addCounty, updateCounty, deleteCounty
+        invoices, auditLog
     } = useCompetitions();
     const { hasPermission } = usePermissions();
 
@@ -43,7 +41,6 @@ const Settings: React.FC<SettingsProps> = ({ setPage }) => {
         { name: 'Organization', visible: hasPermission('settings:manage_organization') },
         { name: 'Users', visible: hasPermission('users:invite') },
         { name: 'Roles & Permissions', visible: hasPermission('users:manage_roles') },
-        { name: 'Counties', visible: hasPermission('settings:manage_counties') },
         { name: 'Billing & Subscription', visible: hasPermission('settings:manage_organization') },
         { name: 'Audit Log', visible: hasPermission('users:manage_roles') },
     ].filter(tab => tab.visible);
@@ -55,9 +52,6 @@ const Settings: React.FC<SettingsProps> = ({ setPage }) => {
 
     const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
     const [editingRole, setEditingRole] = useState<Role | null>(null);
-
-    const [isCountyModalOpen, setIsCountyModalOpen] = useState(false);
-    const [editingCounty, setEditingCounty] = useState<County | null>(null);
 
     useEffect(() => {
         setSettings(organizationSettings);
@@ -118,16 +112,6 @@ const Settings: React.FC<SettingsProps> = ({ setPage }) => {
         if (users.some(u => u.roleId === roleId)) { alert('Cannot delete a role that is currently assigned to users.'); return; }
         if (window.confirm('Are you sure you want to delete this role?')) { deleteRole(roleId); }
     };
-
-    // County Modal Handlers
-    const openCreateCountyModal = () => { setEditingCounty(null); setIsCountyModalOpen(true); };
-    const openEditCountyModal = (county: County) => { setEditingCounty(county); setIsCountyModalOpen(true); };
-    const closeCountyModal = () => { setIsCountyModalOpen(false); setEditingCounty(null); };
-    const handleSaveCounty = (data: { name: string }) => {
-        if (editingCounty) { updateCounty({ ...editingCounty, ...data }); } else { addCounty(data); }
-        closeCountyModal();
-    };
-    const handleDeleteCounty = (id: string) => { if (window.confirm('Are you sure you want to delete this county?')) { deleteCounty(id); } };
     
     const getRoleName = (roleId: string) => roles.find(r => r.id === roleId)?.name || 'Unknown Role';
 
@@ -147,7 +131,6 @@ const Settings: React.FC<SettingsProps> = ({ setPage }) => {
                 {activeTab === 'Organization' && hasPermission('settings:manage_organization') && <Button onClick={handleSave}>Save Changes</Button>}
                 {activeTab === 'Users' && hasPermission('users:invite') && <Button onClick={openInviteModal}><PlusIcon className="h-5 w-5 mr-2" />Invite User</Button>}
                 {activeTab === 'Roles & Permissions' && hasPermission('users:manage_roles') && <Button onClick={openCreateRoleModal}><PlusIcon className="h-5 w-5 mr-2" />Create Role</Button>}
-                {activeTab === 'Counties' && hasPermission('settings:manage_counties') && <Button onClick={openCreateCountyModal}><PlusIcon className="h-5 w-5 mr-2" />Add County</Button>}
             </div>
 
             <Tabs tabs={availableTabs.map(t => t.name)} activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -167,9 +150,6 @@ const Settings: React.FC<SettingsProps> = ({ setPage }) => {
                  {activeTab === 'Roles & Permissions' && (
                     <div className="bg-white rounded-lg shadow-md overflow-hidden"><table className="min-w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th><th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{roles.map(role => (<tr key={role.id}><td className="px-6 py-4 font-medium">{role.name}</td><td className="px-6 py-4 text-sm text-gray-500">{role.description}</td><td className="px-6 py-4 text-right text-sm font-medium space-x-4"><button onClick={() => openEditRoleModal(role)} className="text-indigo-600 hover:text-indigo-900">Edit</button><button onClick={() => handleDeleteRole(role.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table></div>
                 )}
-                {activeTab === 'Counties' && (
-                    <div className="bg-white rounded-lg shadow-md overflow-hidden"><table className="min-w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">County Name</th><th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th></tr></thead><tbody className="divide-y divide-gray-200">{counties.map(county => (<tr key={county.id}><td className="px-6 py-4 font-medium">{county.name}</td><td className="px-6 py-4 text-right text-sm font-medium space-x-4"><button onClick={() => openEditCountyModal(county)} className="text-indigo-600 hover:text-indigo-900">Edit</button><button onClick={() => handleDeleteCounty(county.id)} className="text-red-600 hover:text-red-900">Delete</button></td></tr>))}</tbody></table></div>
-                )}
                 {activeTab === 'Billing & Subscription' && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start"><Card><h2 className="text-xl font-semibold text-gray-800 flex items-center mb-4"><CreditCardIcon className="h-6 w-6 mr-3 text-blue-600"/> Current Subscription</h2><div className="bg-blue-50 p-6 rounded-lg"><div className="flex justify-between items-center"><p className="text-lg font-bold text-blue-800">PRO Plan</p><p className="text-2xl font-bold text-blue-900">$49<span className="text-base font-medium">/mo</span></p></div><p className="text-sm text-blue-700 mt-2">Your plan renews on August 1, 2024.</p></div><p className="text-sm text-gray-600 mt-6">The PRO plan gives you access to advanced features like referee management, player transfers, and full data exports.</p><Button onClick={() => setPage('MARKETPLACE')} variant='secondary' className="w-full mt-4">Manage Plan or Upgrade</Button></Card><Card className="!p-0"><h2 className="text-xl font-semibold text-gray-800 p-6 border-b">Invoice History</h2><div className="overflow-x-auto"><table className="min-w-full"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase"></th></tr></thead><tbody className="divide-y divide-gray-200">{invoices.map(invoice => (<tr key={invoice.id}><td className="px-6 py-4 font-medium">{invoice.id}</td><td className="px-6 py-4 text-sm text-gray-500">{invoice.date}</td><td className="px-6 py-4 text-sm text-gray-500">{invoice.amount}</td><td className="px-6 py-4"><span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">{invoice.status}</span></td><td className="px-6 py-4 text-right"><a href="#" className="text-blue-600 hover:underline text-sm inline-flex items-center">Download <ArrowTopRightOnSquareIcon className="h-4 w-4 ml-1"/></a></td></tr>))}</tbody></table></div></Card></div>
                 )}
@@ -180,7 +160,6 @@ const Settings: React.FC<SettingsProps> = ({ setPage }) => {
 
             <Modal isOpen={isUserModalOpen} onClose={closeUserModal} title={editingUser ? 'Edit User' : 'Invite New User'}><UserForm user={editingUser} roles={roles} onSave={handleSaveUser} onClose={closeUserModal} /></Modal>
             <Modal isOpen={isRoleModalOpen} onClose={closeRoleModal} title={editingRole ? 'Edit Role' : 'Create New Role'}><RoleForm role={editingRole} onSave={handleSaveRole} onClose={closeRoleModal} /></Modal>
-            <Modal isOpen={isCountyModalOpen} onClose={closeCountyModal} title={editingCounty ? 'Edit County' : 'Add New County'}><CountyForm county={editingCounty} onSave={handleSaveCounty} onClose={closeCountyModal} /></Modal>
         </div>
     );
 };

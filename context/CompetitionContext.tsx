@@ -8,6 +8,7 @@ import {
 import { 
     mockOrganizationSettings,
     mockUsers, mockRoles, mockInvoices, mockAuditLog, 
+    mockCounties,
     mockPortalConfig,
     MOCK_NATIONAL_TEAM, MOCK_NATIONAL_SQUAD, MOCK_INTERNATIONAL_MATCHES
 } from './mock_data.ts';
@@ -54,9 +55,6 @@ interface CompetitionContextType {
     invoices: Invoice[];
     auditLog: AuditLog[];
     counties: County[];
-    addCounty: (data: { name: string }) => void;
-    updateCounty: (county: County) => void;
-    deleteCounty: (id: string) => void;
     arenas: Arena[];
     addArena: (data: Omit<Arena, 'id'>) => void;
     updateArena: (arena: Arena) => void;
@@ -145,7 +143,7 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     const [roles, setRoles] = useState<Role[]>(mockRoles);
     const [invoices] = useState<Invoice[]>(mockInvoices);
     const [auditLog, setAuditLog] = useState<AuditLog[]>(mockAuditLog);
-    const [counties, setCounties] = useState<County[]>([]);
+    const [counties, setCounties] = useState<County[]>(mockCounties);
     const [arenas, setArenas] = useState<Arena[]>([]);
     const [sports, setSports] = useState<Sport[]>([]);
     const [sanctions, setSanctions] = useState<Sanction[]>([]);
@@ -169,7 +167,6 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     const sportUpdater = createOptimisticUpdater(setSports, 'sport');
     const refereeUpdater = createOptimisticUpdater(setReferees, 'referee');
     const observerUpdater = createOptimisticUpdater(setObservers, 'observer');
-    const countyUpdater = createOptimisticUpdater(setCounties, 'county');
     const sanctionUpdater = createOptimisticUpdater(setSanctions, 'sanction');
     const transferUpdater = createOptimisticUpdater(setTransfers, 'transfer');
     const registrationUpdater = createOptimisticUpdater(setPlayerRegistrations, 'player registration');
@@ -223,7 +220,6 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
                 fetchTable('arenas', setArenas),
                 fetchTable('referees', (data) => setReferees((data as any[] ?? []).map(r => ({...r, dateOfBirth: r.date_of_birth, photoUrl: r.photo_url})) as Referee[])),
                 fetchTable('observers', (data) => setObservers((data as any[] ?? []).map(o => ({...o, dateOfBirth: o.date_of_birth, photoUrl: o.photo_url})) as Observer[])),
-                fetchTable('counties', setCounties),
                 fetchTable('sanctions', (data) => setSanctions((data as any[] ?? []).map(s => ({...s, teamId: s.team_id, playerId: s.player_id})) as Sanction[])),
                 fetchTable('transfers', (data) => setTransfers((data as any[] ?? []).map(t => ({...t, playerId: t.player_id, fromTeamId: t.from_team_id, toTeamId: t.to_team_id})) as Transfer[])),
                 fetchTable('player_registrations', (data) => setPlayerRegistrations((data as any[] ?? []).map(pr => ({...pr, playerId: pr.player_id, registrationNumber: pr.registration_number, validFrom: pr.valid_from, validUntil: pr.valid_until})) as PlayerRegistration[])),
@@ -642,41 +638,6 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
             if (error) throw error;
         } catch (error) {
             observerUpdater.handleError(originalState, error, 'delete');
-        }
-    };
-
-    // --- COUNTIES ---
-    const addCounty = async (data: { name: string }) => {
-        const tempId = `county-${Date.now()}`;
-        const newCounty = { id: tempId, ...data };
-        const originalState = counties;
-        countyUpdater.add(newCounty);
-        try {
-            const { data: inserted, error } = await getSupabase().from('counties').insert(data).select().single();
-            if (error) throw error;
-            setCounties(prev => prev.map(c => c.id === tempId ? { ...c, id: inserted.id } : c));
-        } catch (error) {
-            countyUpdater.handleError(originalState, error, 'add');
-        }
-    };
-    const updateCounty = async (county: County) => {
-        const originalState = counties;
-        countyUpdater.update(county);
-        try {
-            const { error } = await getSupabase().from('counties').update({ name: county.name }).eq('id', county.id);
-            if (error) throw error;
-        } catch(error) {
-            countyUpdater.handleError(originalState, error, 'update');
-        }
-    };
-    const deleteCounty = async (id: string) => {
-        const originalState = counties;
-        countyUpdater.delete(id);
-        try {
-            const { error } = await getSupabase().from('counties').delete().eq('id', id);
-            if (error) throw error;
-        } catch (error) {
-            countyUpdater.handleError(originalState, error, 'delete');
         }
     };
 
@@ -1132,7 +1093,7 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         currentUser, users, setCurrentUser, inviteUser, updateUser, deleteUser,
         roles, addRole, updateRole, deleteRole,
         invoices, auditLog,
-        counties, addCounty, updateCounty, deleteCounty,
+        counties,
         arenas, addArena, updateArena, deleteArena,
         sports, addSport, updateSport, deleteSport,
         sanctions, addSanction, updateSanction, deleteSanction,

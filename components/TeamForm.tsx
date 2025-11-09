@@ -7,15 +7,6 @@ import type { Team } from '../types.ts';
 import Button from './ui/Button.tsx';
 import { useCompetitions } from '../context/CompetitionContext.tsx';
 
-// Copied from CompetitionForm.tsx, should be moved to a shared file in a real app
-const romanianCounties = [
-  "Alba", "Arad", "Argeș", "Bacău", "Bihor", "Bistrița-Năsăud", "Botoșani", "Brașov", "Brăila",
-  "București", "Buzău", "Caraș-Severin", "Călărași", "Cluj", "Constanța", "Covasna", "Dâmbovița",
-  "Dolj", "Galați", "Giurgiu", "Gorj", "Harghita", "Hunedoara", "Ialomița", "Iași", "Ilfov",
-  "Maramureș", "Mehedinți", "Mureș", "Neamț", "Olt", "Prahova", "Satu Mare", "Sălaj", "Sibiu",
-  "Suceava", "Teleorman", "Timiș", "Tulcea", "Vaslui", "Vâlcea", "Vrancea"
-];
-
 interface TeamFormProps {
   team?: Team | null;
   // FIX: Replace 'any' with a specific type for better type safety.
@@ -24,7 +15,7 @@ interface TeamFormProps {
 }
 
 const TeamForm: React.FC<TeamFormProps> = ({ team, onSave, onClose }) => {
-  const { users } = useCompetitions();
+  const { users, counties } = useCompetitions();
 
   const [name, setName] = useState('');
   const [country, setCountry] = useState('Romania');
@@ -142,7 +133,7 @@ const TeamForm: React.FC<TeamFormProps> = ({ team, onSave, onClose }) => {
               <label htmlFor="county" className="block text-sm font-medium text-gray-700">Județ</label>
               <select id="county" value={county} onChange={e => setCounty(e.target.value)} className="mt-1 block w-full border rounded-md p-2">
                   <option value="">Selectează...</option>
-                  {romanianCounties.map(c => <option key={c} value={c}>{c}</option>)}
+                  {counties.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </div>
             <div>

@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import type { Arena } from '../types.ts';
 // FIX: Added .tsx extension to module import to resolve module resolution error.
 import Button from './ui/Button.tsx';
+import { useCompetitions } from '../context/CompetitionContext.tsx';
 
 interface ArenaFormProps {
   arena?: Arena | null;
@@ -12,15 +13,8 @@ interface ArenaFormProps {
   onClose: () => void;
 }
 
-const romanianCounties = [
-    "Alba", "Arad", "Argeș", "Bacău", "Bihor", "Bistrița-Năsăud", "Botoșani", "Brașov", "Brăila",
-    "București", "Buzău", "Caraș-Severin", "Călărași", "Cluj", "Constanța", "Covasna", "Dâmbovița",
-    "Dolj", "Galați", "Giurgiu", "Gorj", "Harghita", "Hunedoara", "Ialomița", "Iași", "Ilfov",
-    "Maramureș", "Mehedinți", "Mureș", "Neamț", "Olt", "Prahova", "Satu Mare", "Sălaj", "Sibiu",
-    "Suceava", "Teleorman", "Timiș", "Tulcea", "Vaslui", "Vâlcea", "Vrancea"
-];
-
 const ArenaForm: React.FC<ArenaFormProps> = ({ arena, onSave, onClose }) => {
+  const { counties } = useCompetitions();
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [county, setCounty] = useState('');
@@ -86,7 +80,7 @@ const ArenaForm: React.FC<ArenaFormProps> = ({ arena, onSave, onClose }) => {
                 <label htmlFor="county" className="block text-sm font-medium">Județ</label>
                 <select id="county" value={county} onChange={e => setCounty(e.target.value)} className="mt-1 block w-full border rounded-md p-2">
                     <option value="">Selectează...</option>
-                    {romanianCounties.map(c => <option key={c} value={c}>{c}</option>)}
+                    {counties.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
             </div>
             <div>

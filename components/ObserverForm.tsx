@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Observer, RefereeCategory } from '../types.ts';
 import Button from './ui/Button.tsx';
+import { useCompetitions } from '../context/CompetitionContext.tsx';
 
 interface ObserverFormProps {
   observer?: Observer | null;
@@ -8,17 +9,10 @@ interface ObserverFormProps {
   onClose: () => void;
 }
 
-const romanianCounties = [
-    "Alba", "Arad", "Argeș", "Bacău", "Bihor", "Bistrița-Năsăud", "Botoșani", "Brașov", "Brăila",
-    "București", "Buzău", "Caraș-Severin", "Călărași", "Cluj", "Constanța", "Covasna", "Dâmbovița",
-    "Dolj", "Galați", "Giurgiu", "Gorj", "Harghita", "Hunedoara", "Ialomița", "Iași", "Ilfov",
-    "Maramureș", "Mehedinți", "Mureș", "Neamț", "Olt", "Prahova", "Satu Mare", "Sălaj", "Sibiu",
-    "Suceava", "Teleorman", "Timiș", "Tulcea", "Vaslui", "Vâlcea", "Vrancea"
-];
-
 const observerCategories: RefereeCategory[] = ['ASPIRANTI', 'STAGIARI', 'CATEGORIA 3', 'CATEGORIA 2', 'CATEGORIA 1'];
 
 const ObserverForm: React.FC<ObserverFormProps> = ({ observer, onSave, onClose }) => {
+  const { counties } = useCompetitions();
   const [name, setName] = useState('');
   const [county, setCounty] = useState('');
   const [city, setCity] = useState('');
@@ -102,7 +96,7 @@ const ObserverForm: React.FC<ObserverFormProps> = ({ observer, onSave, onClose }
                 <label htmlFor="county" className="block text-sm font-medium">Județ</label>
                 <select id="county" value={county} onChange={e => setCounty(e.target.value)} className="mt-1 block w-full border rounded-md p-2">
                     <option value="">Selectează...</option>
-                    {romanianCounties.map(c => <option key={c} value={c}>{c}</option>)}
+                    {counties.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
             </div>
             <div>

@@ -15,16 +15,8 @@ interface CompetitionFormProps {
   onClose: () => void;
 }
 
-const romanianCounties = [
-  "Alba", "Arad", "Argeș", "Bacău", "Bihor", "Bistrița-Năsăud", "Botoșani", "Brașov", "Brăila",
-  "București", "Buzău", "Caraș-Severin", "Călărași", "Cluj", "Constanța", "Covasna", "Dâmbovița",
-  "Dolj", "Galați", "Giurgiu", "Gorj", "Harghita", "Hunedoara", "Ialomița", "Iași", "Ilfov",
-  "Maramureș", "Mehedinți", "Mureș", "Neamț", "Olt", "Prahova", "Satu Mare", "Sălaj", "Sibiu",
-  "Suceava", "Teleorman", "Timiș", "Tulcea", "Vaslui", "Vâlcea", "Vrancea"
-];
-
 const CompetitionForm: React.FC<CompetitionFormProps> = ({ competition, onSave, onClose }) => {
-  const { arenas, users, sports, teams } = useCompetitions();
+  const { arenas, users, sports, teams, counties } = useCompetitions();
   const [name, setName] = useState('');
   const [season, setSeason] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -119,7 +111,7 @@ const CompetitionForm: React.FC<CompetitionFormProps> = ({ competition, onSave, 
               <label htmlFor="county" className="block text-sm font-medium text-gray-700">County / Region</label>
               <select id="county" value={county || ''} onChange={e => setCounty(e.target.value || undefined)} className="mt-1 block w-full border rounded-md p-2">
                   <option value="">None (Show all teams)</option>
-                  {romanianCounties.map(c => <option key={c} value={c}>{c}</option>)}
+                  {counties.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </div>
             <div>

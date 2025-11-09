@@ -5,6 +5,14 @@ import {
   MatchEventType, PublicConfig, NationalTeam, NationalSquadPlayer
 } from '../types.ts';
 
+const romanianCountiesList = [
+  "Alba", "Arad", "Argeș", "Bacău", "Bihor", "Bistrița-Năsăud", "Botoșani", "Brașov", "Brăila",
+  "București", "Buzău", "Caraș-Severin", "Călărași", "Cluj", "Constanța", "Covasna", "Dâmbovița",
+  "Dolj", "Galați", "Giurgiu", "Gorj", "Harghita", "Hunedoara", "Ialomița", "Iași", "Ilfov",
+  "Maramureș", "Mehedinți", "Mureș", "Neamț", "Olt", "Prahova", "Satu Mare", "Sălaj", "Sibiu",
+  "Suceava", "Teleorman", "Timiș", "Tulcea", "Vaslui", "Vâlcea", "Vrancea"
+];
+
 // MOCK DATA
 export const mockTeams: Team[] = [
   { id: 'team-1', name: 'Steaua București', country: 'Romania', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/FCSB_logo_2022.svg/1200px-FCSB_logo_2022.svg.png', county: 'București', city: 'București', address: 'Bd. Ghencea 45', foundedYear: 1947, clubColors: { primary: '#0000FF', secondary: '#FF0000' }, president: 'Gigi Becali', competitionOrganizer: 'user-2', coach: 'Elias Charalambous', status: 'active' },
@@ -79,7 +87,10 @@ export const mockUsers: User[] = [
 
 export const mockInvoices: Invoice[] = [ { id: '#12345', date: 'July 1, 2024', amount: '$49.00', status: 'Paid' } ];
 export const mockAuditLog: AuditLog[] = [ { id: 'log-1', userId: 'user-1', userName: 'Super Admin', action: 'Create Competition', details: 'Created competition: Liga 1', timestamp: new Date().toISOString() } ];
-export const mockCounties: County[] = [ { id: 'county-1', name: 'Bucuresti' }, { id: 'county-2', name: 'Cluj' } ];
+export const mockCounties: County[] = romanianCountiesList.map(name => ({
+    id: name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+    name
+}));
 
 export const mockArenas: Arena[] = [
   { 

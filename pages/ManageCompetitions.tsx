@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 // FIX: Added .ts extension to module import.
-import type { Page, Competition } from '../types.ts';
+import type { Competition } from '../types.ts';
 // FIX: Added .tsx extension to module import to resolve module resolution error.
 import Button from '../components/ui/Button.tsx';
 import Modal from '../components/ui/Modal.tsx';

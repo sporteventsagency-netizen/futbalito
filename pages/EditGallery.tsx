@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 // FIX: Added .tsx extension to module import.
 import { useCompetitions } from '../context/CompetitionContext.tsx';
@@ -29,7 +28,7 @@ const EditGallery: React.FC<EditGalleryProps> = ({ competitionId, galleryId, onB
       if (gallery) {
         setExistingGallery(gallery);
         setTitle(gallery.title);
-        setSelectedImageIds(gallery.imageIds);
+        setSelectedImageIds(gallery.imageIds || []);
       }
     }
   }, [galleryId, getGalleryById]);

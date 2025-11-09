@@ -1,16 +1,12 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-
-interface ErrorBoundaryProps {
-  children?: ReactNode;
-}
+import React, { Component, ErrorInfo, ReactNode, PropsWithChildren } from 'react';
 
 interface State {
   hasError: boolean;
   error: Error | null;
 }
 
-// FIX: Replaced React.PropsWithChildren with an explicit props interface to resolve a typing issue where 'this.props' was not found.
-class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
+// FIX: Replaced the explicit props interface with React.PropsWithChildren to resolve a typing issue where 'this.props' was not found on the component instance.
+class ErrorBoundary extends Component<PropsWithChildren<{}>, State> {
   state: State = {
     hasError: false,
     error: null,

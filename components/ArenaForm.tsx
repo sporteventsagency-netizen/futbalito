@@ -1,11 +1,10 @@
-
-
 import React, { useState, useEffect } from 'react';
 // FIX: Added .ts extension to module import.
 import type { Arena } from '../types.ts';
 // FIX: Added .tsx extension to module import to resolve module resolution error.
 import Button from './ui/Button.tsx';
 import { useCompetitions } from '../context/CompetitionContext.tsx';
+import { mockCounties } from '../context/mock_data.ts';
 
 interface ArenaFormProps {
   arena?: Arena | null;
@@ -14,7 +13,7 @@ interface ArenaFormProps {
 }
 
 const ArenaForm: React.FC<ArenaFormProps> = ({ arena, onSave, onClose }) => {
-  const { counties } = useCompetitions();
+  const counties = mockCounties;
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [county, setCounty] = useState('');

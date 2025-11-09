@@ -54,7 +54,6 @@ interface CompetitionContextType {
     deleteRole: (id: string) => void;
     invoices: Invoice[];
     auditLog: AuditLog[];
-    counties: County[];
     arenas: Arena[];
     addArena: (data: Omit<Arena, 'id'>) => void;
     updateArena: (arena: Arena) => void;
@@ -125,7 +124,7 @@ const createOptimisticUpdater = <T extends { id: string }>(setter: React.Dispatc
         delete: (id: string) => setter(prev => prev.filter(i => i.id !== id)),
         handleError: (originalState: T[], error: any, action: 'add' | 'update' | 'delete') => {
             console.error(`[Supabase] Error ${action}ing ${entityName}:`, error);
-            alert(`Failed to ${action} ${entityName}: ${error.message}\n\nHint: Check if the '${entityName}s' table has the correct RLS policy enabled.`);
+            alert(`Failed to ${action} ${entityName}: ${error.message}\n\nHint: This could be due to a database permissions issue (Row Level Security) or a schema mismatch. Please check that RLS policies are enabled for this action and that all column names in the code (e.g., 'column_name') match the database schema exactly.`);
             setter(originalState);
         }
     };
@@ -143,7 +142,6 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     const [roles, setRoles] = useState<Role[]>(mockRoles);
     const [invoices] = useState<Invoice[]>(mockInvoices);
     const [auditLog, setAuditLog] = useState<AuditLog[]>(mockAuditLog);
-    const [counties, setCounties] = useState<County[]>(mockCounties);
     const [arenas, setArenas] = useState<Arena[]>([]);
     const [sports, setSports] = useState<Sport[]>([]);
     const [sanctions, setSanctions] = useState<Sanction[]>([]);
@@ -1165,7 +1163,6 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         currentUser, users, setCurrentUser, inviteUser, updateUser, deleteUser,
         roles, addRole, updateRole, deleteRole,
         invoices, auditLog,
-        counties,
         arenas, addArena, updateArena, deleteArena,
         sports, addSport, updateSport, deleteSport,
         sanctions, addSanction, updateSanction, deleteSanction,

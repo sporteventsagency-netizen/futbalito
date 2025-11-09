@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Referee, RefereeCategory } from '../types.ts';
 import Button from './ui/Button.tsx';
 import { useCompetitions } from '../context/CompetitionContext.tsx';
+import { mockCounties } from '../context/mock_data.ts';
 
 interface RefereeFormProps {
   referee?: Referee | null;
@@ -12,7 +13,7 @@ interface RefereeFormProps {
 const refereeCategories: RefereeCategory[] = ['ASPIRANTI', 'STAGIARI', 'CATEGORIA 3', 'CATEGORIA 2', 'CATEGORIA 1'];
 
 const RefereeForm: React.FC<RefereeFormProps> = ({ referee, onSave, onClose }) => {
-  const { counties } = useCompetitions();
+  const counties = mockCounties;
   const [name, setName] = useState('');
   const [county, setCounty] = useState('');
   const [city, setCity] = useState('');

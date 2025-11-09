@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Observer, RefereeCategory } from '../types.ts';
 import Button from './ui/Button.tsx';
 import { useCompetitions } from '../context/CompetitionContext.tsx';
+import { mockCounties } from '../context/mock_data.ts';
 
 interface ObserverFormProps {
   observer?: Observer | null;
@@ -12,7 +13,7 @@ interface ObserverFormProps {
 const observerCategories: RefereeCategory[] = ['ASPIRANTI', 'STAGIARI', 'CATEGORIA 3', 'CATEGORIA 2', 'CATEGORIA 1'];
 
 const ObserverForm: React.FC<ObserverFormProps> = ({ observer, onSave, onClose }) => {
-  const { counties } = useCompetitions();
+  const counties = mockCounties;
   const [name, setName] = useState('');
   const [county, setCounty] = useState('');
   const [city, setCity] = useState('');

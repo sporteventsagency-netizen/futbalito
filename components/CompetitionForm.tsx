@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 // FIX: Added .ts extension to module import.
 import type { Competition, Team } from '../types.ts';
@@ -6,6 +5,7 @@ import type { Competition, Team } from '../types.ts';
 import Button from './ui/Button.tsx';
 // FIX: Added .tsx extension to module import.
 import { useCompetitions } from '../context/CompetitionContext.tsx';
+import { mockCounties } from '../context/mock_data.ts';
 import { PlusIcon, XMarkIcon } from './icons/Icons.tsx';
 
 interface CompetitionFormProps {
@@ -16,7 +16,8 @@ interface CompetitionFormProps {
 }
 
 const CompetitionForm: React.FC<CompetitionFormProps> = ({ competition, onSave, onClose }) => {
-  const { arenas, users, sports, teams, counties } = useCompetitions();
+  const { arenas, users, sports, teams } = useCompetitions();
+  const counties = mockCounties;
   const [name, setName] = useState('');
   const [season, setSeason] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);

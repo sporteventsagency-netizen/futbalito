@@ -1,11 +1,10 @@
-
-
 import React, { useState, useEffect } from 'react';
 // FIX: Added .ts extension to module import.
 import type { Team } from '../types.ts';
 // FIX: Added .tsx extension to module import to resolve module resolution error.
 import Button from './ui/Button.tsx';
 import { useCompetitions } from '../context/CompetitionContext.tsx';
+import { mockCounties } from '../context/mock_data.ts';
 
 interface TeamFormProps {
   team?: Team | null;
@@ -15,7 +14,8 @@ interface TeamFormProps {
 }
 
 const TeamForm: React.FC<TeamFormProps> = ({ team, onSave, onClose }) => {
-  const { users, counties } = useCompetitions();
+  const { users } = useCompetitions();
+  const counties = mockCounties;
 
   const [name, setName] = useState('');
   const [country, setCountry] = useState('Romania');

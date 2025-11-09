@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 // FIX: Added .ts extension to module import.
 import type { Page, Competition } from '../types.ts';
-import Card from '../components/ui/Card.tsx';
 // FIX: Added .tsx extension to module import to resolve module resolution error.
 import Button from '../components/ui/Button.tsx';
 import Modal from '../components/ui/Modal.tsx';
@@ -17,12 +16,11 @@ import usePermissions from '../hooks/usePermissions.ts';
 
 
 interface ManageCompetitionsProps {
-    setPage: (page: Page) => void;
     onViewCompetition: (id: string) => void;
 }
 
-const ManageCompetitions: React.FC<ManageCompetitionsProps> = ({setPage, onViewCompetition}) => {
-  const { competitions, addCompetition, updateCompetition, deleteCompetition, users, sports } = useCompetitions();
+const ManageCompetitions: React.FC<ManageCompetitionsProps> = ({onViewCompetition}) => {
+  const { competitions, addCompetition, updateCompetition, deleteCompetition, sports } = useCompetitions();
   const { hasPermission } = usePermissions();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompetition, setEditingCompetition] = useState<Competition | null>(null);

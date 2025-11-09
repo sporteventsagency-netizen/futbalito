@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useCompetitions } from '../context/CompetitionContext.tsx';
 import PublicHeader from '../components/public/PublicHeader.tsx';
 import { ShieldCheckIcon } from '../components/icons/Icons.tsx';
-import type { Player } from '../types.ts';
 
 type SortKey = 'goals' | 'assists' | 'name';
 

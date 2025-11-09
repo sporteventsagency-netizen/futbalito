@@ -78,7 +78,7 @@ interface CompetitionContextType {
     addObserver: (data: Omit<Observer, 'id' | 'photoUrl'> & { photoFile?: File | null }) => void;
     updateObserver: (observer: Observer, photoFile?: File | null) => void;
     deleteObserver: (id: string) => void;
-    calculateStandings: (competitionId: string, stage: string) => Standing[];
+    calculateStandings: (competitionId: string) => Standing[];
     articles: Article[];
     getArticleById: (id: string) => Article | undefined;
     addArticle: (data: Omit<Article, 'id' | 'featuredImageUrl' | 'author' | 'createdAt'>, imageFile: File | null) => void;
@@ -145,7 +145,7 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     const [portalConfig, setPortalConfig] = useState<PortalConfig>(mockPortalConfig);
     const [transfers, setTransfers] = useState<Transfer[]>(mockTransfers);
     const [playerRegistrations, setPlayerRegistrations] = useState<PlayerRegistration[]>(mockPlayerRegistrations);
-    const [nationalTeam, setNationalTeam] = useState<NationalTeam>(MOCK_NATIONAL_TEAM);
+    const [nationalTeam] = useState<NationalTeam>(MOCK_NATIONAL_TEAM);
     const [nationalSquad, setNationalSquad] = useState<NationalSquadPlayer[]>(MOCK_NATIONAL_SQUAD);
     const [comments, setComments] = useState<Comment[]>([]);
 
@@ -552,7 +552,7 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     const getTransfersByPlayerId = (playerId: string) => transfers.filter(t => t.playerId === playerId);
     const getPlayerRegistrationsByPlayerId = (playerId: string) => playerRegistrations.filter(pr => pr.playerId === playerId);
 
-    const calculateStandings = (competitionId: string, stage: string): Standing[] => {
+    const calculateStandings = (competitionId: string): Standing[] => {
         const competition = competitions.find(c => c.id === competitionId);
         if (!competition) return [];
         const competitionMatches = matches.filter(m => m.competitionId === competitionId && m.status === 'Finished');

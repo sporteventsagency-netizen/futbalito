@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Sanction, Team, Player } from '../types.ts';
+import type { Sanction } from '../types.ts';
 import Button from './ui/Button.tsx';
 import { useCompetitions } from '../context/CompetitionContext.tsx';
 

@@ -47,8 +47,7 @@ const CompetitionDetail: React.FC<CompetitionDetailProps> = ({ competitionId, on
 
     const standings = useMemo(() => {
         if (!competition || (competition.format !== 'league' && competition.format !== 'mixed')) return [];
-        // Assuming 'Group Stage' for now. A more complex system might need dynamic stage names.
-        return calculateStandings(competitionId, 'Group Stage'); 
+        return calculateStandings(competitionId); 
     }, [competition, competitionId, calculateStandings]);
     
     const competitionSanctions = useMemo(() => sanctions.filter(s => s.competitionId === competitionId), [sanctions, competitionId]);
@@ -61,8 +60,12 @@ const CompetitionDetail: React.FC<CompetitionDetailProps> = ({ competitionId, on
     const openCreateSanctionModal = () => { setEditingSanction(null); setIsSanctionModalOpen(true); };
     const openEditSanctionModal = (sanction: Sanction) => { setEditingSanction(sanction); setIsSanctionModalOpen(true); };
     const closeSanctionModal = () => { setIsSanctionModalOpen(false); setEditingSanction(null); };
-    const handleSaveSanction = (data: Omit<Sanction, 'id'>) => {
-        if (editingSanction) { updateSanction({ ...editingSanction, ...data }); } else { addSanction({ ...data, competitionId }); }
+    const handleSaveSanction = (data: Omit<Sanction, 'id' | 'competitionId'>) => {
+        if (editingSanction) { 
+            updateSanction({ ...editingSanction, ...data, competitionId }); 
+        } else { 
+            addSanction({ ...data, competitionId }); 
+        }
         closeSanctionModal();
     };
     const handleDeleteSanction = (id: string) => { if (window.confirm('Are you sure?')) { deleteSanction(id); }};

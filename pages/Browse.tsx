@@ -1,7 +1,6 @@
 
 
 import React from 'react';
-import Card from '../components/ui/Card.tsx';
 // FIX: Added .tsx extension to module import.
 import { useCompetitions } from '../context/CompetitionContext.tsx';
 

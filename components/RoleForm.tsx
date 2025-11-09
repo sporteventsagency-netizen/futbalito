@@ -85,7 +85,7 @@ const RoleForm: React.FC<RoleFormProps> = ({ role, onSave, onClose }) => {
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                 <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700">Role Name</label>
-                    <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} disabled={isDefaultRole} className="mt-1 block w-full border border-gray-300 rounded-md p-2 disabled:bg-gray-100" />
+                    <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} disabled={!!isDefaultRole} className="mt-1 block w-full border border-gray-300 rounded-md p-2 disabled:bg-gray-100" />
                 </div>
                  <div>
                     <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>

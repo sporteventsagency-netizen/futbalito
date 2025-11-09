@@ -5,7 +5,7 @@ import usePermissions from '../hooks/usePermissions.ts';
 // FIX: Added .ts extension to module import to resolve module resolution error.
 import type { Page } from '../types.ts';
 import {
-  ChartPieIcon, EyeIcon, WrenchScrewdriverIcon, UsersIcon,
+  ChartPieIcon, EyeIcon, UsersIcon,
   UserGroupIcon, FlagIcon, MapIcon, LifebuoyIcon, UserCircleIcon,
   ShieldCheckIcon, NewspaperIcon, BanknotesIcon, Cog6ToothIcon,
   ArrowRightStartOnRectangleIcon, XMarkIcon, BuildingLibraryIcon, AcademicCapIcon,

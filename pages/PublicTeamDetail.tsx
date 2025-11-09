@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useCompetitions } from '../context/CompetitionContext.tsx';
 import PublicHeader from '../components/public/PublicHeader.tsx';
@@ -22,7 +23,8 @@ const PublicTeamDetail: React.FC<PublicTeamDetailProps> = ({ teamId }) => {
 
     const standings = useMemo(() => {
         if (!primaryCompetition) return null;
-        const allStandings = calculateStandings(primaryCompetition.id, 'Group Stage');
+        // FIX: The `calculateStandings` function expects only one argument (`competitionId`). The second argument has been removed.
+        const allStandings = calculateStandings(primaryCompetition.id);
         return allStandings.find(s => s.teamId === teamId);
     }, [primaryCompetition, teamId, calculateStandings]);
     

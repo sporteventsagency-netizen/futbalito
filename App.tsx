@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
@@ -209,7 +210,8 @@ const App: React.FC = () => {
         switch (page) {
             case 'DASHBOARD': return <Dashboard setPage={navigateTo} />;
             case 'BROWSE': return <Browse />;
-            case 'MANAGE_COMPETITIONS': return <ManageCompetitions setPage={navigateTo} onViewCompetition={handleViewCompetition} />;
+            // FIX: The `setPage` prop is not defined in `ManageCompetitionsProps`. It is removed from the component invocation.
+            case 'MANAGE_COMPETITIONS': return <ManageCompetitions onViewCompetition={handleViewCompetition} />;
             case 'MANAGE_TEAMS': return <ManageTeams />;
             case 'MANAGE_PLAYERS': return <ManagePlayers onViewPlayerDetail={handleViewPlayerDetail} />;
             case 'MANAGE_ARENAS': return <ManageArenas />;

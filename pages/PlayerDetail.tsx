@@ -9,12 +9,11 @@ interface PlayerDetailProps {
 }
 
 const PlayerDetail: React.FC<PlayerDetailProps> = ({ playerId, onBack }) => {
-  const { players, teams, getTransfersByPlayerId, getPlayerRegistrationsByPlayerId } = useCompetitions();
+  const { players, teams, getTransfersByPlayerId } = useCompetitions();
 
   const player = useMemo(() => players.find(p => p.id === playerId), [playerId, players]);
   const team = useMemo(() => teams.find(t => t.id === player?.teamId), [player, teams]);
   const transfers = useMemo(() => getTransfersByPlayerId(playerId), [playerId, getTransfersByPlayerId]);
-  const registrations = useMemo(() => getPlayerRegistrationsByPlayerId(playerId), [playerId, getPlayerRegistrationsByPlayerId]);
 
   if (!player) {
     return (

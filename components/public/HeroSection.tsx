@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Article, Competition } from '../../types.ts';
+import type { Article } from '../../types.ts';
 import { useCompetitions } from '../../context/CompetitionContext.tsx';
 import { ArrowRightIcon } from '../icons/Icons.tsx';
 

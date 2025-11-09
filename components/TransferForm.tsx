@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Transfer, Player } from '../types.ts';
+import type { Transfer } from '../types.ts';
 import { useCompetitions } from '../context/CompetitionContext.tsx';
 import Button from './ui/Button.tsx';
 

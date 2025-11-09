@@ -10,7 +10,8 @@ interface PublicRankingsProps {
 const PublicRankings: React.FC<PublicRankingsProps> = ({ competitionId }) => {
   const { calculateStandings } = useCompetitions();
   
-  const standings = useMemo(() => calculateStandings(competitionId, 'Group Stage'), [calculateStandings, competitionId]);
+  // FIX: The `calculateStandings` function expects only one argument (`competitionId`). The second argument has been removed.
+  const standings = useMemo(() => calculateStandings(competitionId), [calculateStandings, competitionId]);
 
   if (standings.length === 0) {
     return null;

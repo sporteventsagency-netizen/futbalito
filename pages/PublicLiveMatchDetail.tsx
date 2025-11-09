@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCompetitions } from '../context/CompetitionContext.tsx';
 import PublicHeader from '../components/public/PublicHeader.tsx';
 import { ShieldCheckIcon, ChevronLeftIcon } from '../components/icons/Icons.tsx';

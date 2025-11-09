@@ -6,8 +6,6 @@ import usePermissions from '../hooks/usePermissions.ts';
 // FIX: Added .tsx extension to module import to resolve module resolution error.
 import Button from '../components/ui/Button.tsx';
 import { ChevronLeftIcon, PlusIcon } from '../components/icons/Icons.tsx';
-// FIX: Added .ts extension to module import.
-import type { Article } from '../types.ts';
 
 interface ManageArticlesProps {
   competitionId: string;

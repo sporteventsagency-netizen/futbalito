@@ -293,12 +293,15 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         logAction('Update Team', `Updated team: ${finalTeam.name}`);
 
         try {
-            const { error } = await getSupabase().from('teams').update({
+            const { data, error } = await getSupabase().from('teams').update({
                 name: finalTeam.name, country: finalTeam.country, county: finalTeam.county, city: finalTeam.city, address: finalTeam.address,
                 founded_year: finalTeam.foundedYear, club_colors: finalTeam.clubColors, president: finalTeam.president,
                 coach: finalTeam.coach, status: finalTeam.status, logo_url: finalTeam.logoUrl
-            }).eq('id', finalTeam.id);
+            }).eq('id', finalTeam.id).select();
+
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
+
         } catch(error) {
             teamUpdater.handleError(originalState, error, 'update');
         }
@@ -380,13 +383,18 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
                 const updatePayload = {
                     name: compData.name, season: compData.season, logo_url: compData.logoUrl, status: compData.status,
                     format: compData.format, two_legged: compData.twoLegged, teams_per_group: compData.teamsPerGroup,
-                    default_arena_id: compData.defaultArenaId, is_public: compData.isPublic, county: compData.county,
-                    sport_id: compData.sportId, points_for_win: compData.pointsForWin,
+                    default_arena_id: isUuid(compData.defaultArenaId) ? compData.defaultArenaId : null, 
+                    is_public: compData.isPublic, county: compData.county,
+                    sport_id: isUuid(compData.sportId) ? compData.sportId : null, 
+                    points_for_win: compData.pointsForWin,
                     points_for_tie_break_win: compData.pointsForTieBreakWin, public_config: compData.publicConfig
                 };
         
-                const { error: updateError } = await supabase.from('competitions').update(updatePayload).match({ id: updatedComp.id });
+                const { data: updatedData, error: updateError } = await supabase.from('competitions').update(updatePayload).eq('id', updatedComp.id).select();
                 if (updateError) throw updateError;
+                if (!updatedData || updatedData.length === 0) {
+                    throw new Error("Update failed. This might be due to database permissions (RLS).");
+                }
         
                 const { data: currentTeamsInDB, error: fetchError } = await supabase.from('competition_teams').select('team_id').eq('competition_id', updatedComp.id);
                 if(fetchError) throw fetchError;
@@ -405,6 +413,7 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
                 }
             } catch(error) {
                  console.error('[Supabase] update competition error:', error);
+                 alert(`Failed to update competition: ${(error as Error).message}`);
                  setCompetitions(originalState);
             }
         })();
@@ -463,13 +472,16 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         logAction('Update Player', `Updated player: ${finalPlayer.name}`);
 
         try {
-            const { error } = await getSupabase().from('players').update({
+            const { data, error } = await getSupabase().from('players').update({
                 name: finalPlayer.name, team_id: finalPlayer.teamId, cnp: finalPlayer.cnp, date_of_birth: finalPlayer.dateOfBirth,
                 registration_number: finalPlayer.registrationNumber, registration_date: finalPlayer.registrationDate,
                 phone: finalPlayer.phone, email: finalPlayer.email, status: finalPlayer.status, annual_visas: finalPlayer.annualVisas,
                 photo_url: finalPlayer.photoUrl, stats: finalPlayer.stats,
-            }).eq('id', finalPlayer.id);
+            }).eq('id', finalPlayer.id).select();
+
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
+
         } catch (error) {
             playerUpdater.handleError(originalState, error, 'update');
         }
@@ -505,8 +517,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = arenas;
         arenaUpdater.update(arena);
         try {
-            const { error } = await getSupabase().from('arenas').update({ ...arena, spectator_capacity: arena.spectatorCapacity, has_floodlights: arena.hasFloodlights, homologation_date: arena.homologationDate, homologation_expiration: arena.homologationExpiration, field_dimensions: arena.fieldDimensions, goal_dimensions: arena.goalDimensions }).eq('id', arena.id);
+            const { data, error } = await getSupabase().from('arenas').update({ ...arena, spectator_capacity: arena.spectatorCapacity, has_floodlights: arena.hasFloodlights, homologation_date: arena.homologationDate, homologation_expiration: arena.homologationExpiration, field_dimensions: arena.fieldDimensions, goal_dimensions: arena.goalDimensions }).eq('id', arena.id).select();
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch (error) {
             arenaUpdater.handleError(originalState, error, 'update');
         }
@@ -540,8 +553,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = sports;
         sportUpdater.update(sport);
         try {
-            const { error } = await getSupabase().from('sports').update({ name: sport.name, description: sport.description }).eq('id', sport.id);
+            const { data, error } = await getSupabase().from('sports').update({ name: sport.name, description: sport.description }).eq('id', sport.id).select();
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch (error) {
             sportUpdater.handleError(originalState, error, 'update');
         }
@@ -582,8 +596,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = referees;
         refereeUpdater.update(finalReferee);
         try {
-            const { error } = await getSupabase().from('referees').update({ ...finalReferee, date_of_birth: finalReferee.dateOfBirth, photo_url: finalReferee.photoUrl }).eq('id', finalReferee.id);
+            const { data, error } = await getSupabase().from('referees').update({ ...finalReferee, date_of_birth: finalReferee.dateOfBirth, photo_url: finalReferee.photoUrl }).eq('id', finalReferee.id).select();
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch (error) {
             refereeUpdater.handleError(originalState, error, 'update');
         }
@@ -624,8 +639,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = observers;
         observerUpdater.update(finalObserver);
         try {
-            const { error } = await getSupabase().from('observers').update({ ...finalObserver, date_of_birth: finalObserver.dateOfBirth, photo_url: finalObserver.photoUrl }).eq('id', finalObserver.id);
+            const { data, error } = await getSupabase().from('observers').update({ ...finalObserver, date_of_birth: finalObserver.dateOfBirth, photo_url: finalObserver.photoUrl }).eq('id', finalObserver.id).select();
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch (error) {
             observerUpdater.handleError(originalState, error, 'update');
         }
@@ -659,8 +675,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = sanctions;
         sanctionUpdater.update(sanction);
         try {
-            const { error } = await getSupabase().from('sanctions').update({ ...sanction, team_id: sanction.teamId, player_id: sanction.playerId }).eq('id', sanction.id);
+            const { data, error } = await getSupabase().from('sanctions').update({ ...sanction, team_id: sanction.teamId, player_id: sanction.playerId }).eq('id', sanction.id).select();
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch(error) {
             sanctionUpdater.handleError(originalState, error, 'update');
         }
@@ -700,8 +717,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = transfers;
         transferUpdater.update(transfer);
         try {
-            const { error } = await getSupabase().from('transfers').update({ ...transfer, player_id: transfer.playerId, from_team_id: transfer.fromTeamId, to_team_id: transfer.toTeamId }).eq('id', transfer.id);
+            const { data, error } = await getSupabase().from('transfers').update({ ...transfer, player_id: transfer.playerId, from_team_id: transfer.fromTeamId, to_team_id: transfer.toTeamId }).eq('id', transfer.id).select();
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch(error) {
             transferUpdater.handleError(originalState, error, 'update');
         }
@@ -735,8 +753,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = playerRegistrations;
         registrationUpdater.update(reg);
         try {
-            const { error } = await getSupabase().from('player_registrations').update({ ...reg, player_id: reg.playerId, registration_number: reg.registrationNumber, valid_from: reg.validFrom, valid_until: reg.validUntil }).eq('id', reg.id);
+            const { data, error } = await getSupabase().from('player_registrations').update({ ...reg, player_id: reg.playerId, registration_number: reg.registrationNumber, valid_from: reg.validFrom, valid_until: reg.validUntil }).eq('id', reg.id).select();
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch(error) {
             registrationUpdater.handleError(originalState, error, 'update');
         }
@@ -781,11 +800,12 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = articles;
         articleUpdater.update(finalArticle);
         try {
-            const { error } = await getSupabase().from('articles').update({ 
+            const { data, error } = await getSupabase().from('articles').update({ 
                 title: finalArticle.title, content: finalArticle.content,
                 featured_image_url: finalArticle.featuredImageUrl, status: finalArticle.status
-            }).eq('id', finalArticle.id);
+            }).eq('id', finalArticle.id).select();
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch (error) {
             articleUpdater.handleError(originalState, error, 'update');
         }
@@ -821,10 +841,11 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = galleries;
         galleryUpdater.update(gallery);
         try {
-            const { error } = await getSupabase().from('galleries').update({ 
+            const { data, error } = await getSupabase().from('galleries').update({ 
                 title: gallery.title, image_ids: gallery.imageIds 
-            }).eq('id', gallery.id);
+            }).eq('id', gallery.id).select();
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch (error) {
             galleryUpdater.handleError(originalState, error, 'update');
         }
@@ -867,10 +888,11 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = sponsors;
         sponsorUpdater.update(finalSponsor);
         try {
-            const { error } = await getSupabase().from('sponsors').update({ 
+            const { data, error } = await getSupabase().from('sponsors').update({ 
                 name: finalSponsor.name, website_url: finalSponsor.websiteUrl, logo_url: finalSponsor.logoUrl
-            }).eq('id', finalSponsor.id);
+            }).eq('id', finalSponsor.id).select();
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch (error) {
             sponsorUpdater.handleError(originalState, error, 'update');
         }

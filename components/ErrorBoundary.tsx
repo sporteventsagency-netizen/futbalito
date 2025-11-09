@@ -1,4 +1,4 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -10,7 +10,7 @@ interface State {
 }
 
 // FIX: Replaced React.PropsWithChildren with an explicit props interface to resolve a typing issue where 'this.props' was not found.
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, State> {
+class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   state: State = {
     hasError: false,
     error: null,

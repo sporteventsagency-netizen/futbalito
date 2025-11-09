@@ -312,8 +312,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         teamUpdater.delete(id);
         logAction('Delete Team', `Deleted team ID: ${id}`);
         try {
-            const { error } = await getSupabase().from('teams').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('teams').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch (error) {
             teamUpdater.handleError(originalState, error, 'delete');
         }
@@ -427,11 +428,12 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         (async () => {
             try {
                 const supabase = getSupabase();
-                const { error } = await supabase.from('competitions').delete().match({ id });
+                const { data, error } = await supabase.from('competitions').delete().match({ id }).select();
                 if (error) throw error;
+                if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
             } catch(error) {
                 console.error('[Supabase] Error deleting competition:', error);
-                alert('Failed to delete competition from the database. Please refresh.');
+                alert(`Failed to delete competition: ${(error as Error).message}`);
                 setCompetitions(originalState);
             }
         })();
@@ -452,8 +454,11 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
 
         try {
             const { data: inserted, error } = await getSupabase().from('players').insert({
-                name: newPlayerUI.name, team_id: newPlayerUI.teamId, cnp: newPlayerUI.cnp, date_of_birth: newPlayerUI.dateOfBirth,
-                registration_number: newPlayerUI.registrationNumber, registration_date: newPlayerUI.registrationDate, phone: newPlayerUI.phone,
+                name: newPlayerUI.name, team_id: newPlayerUI.teamId, cnp: newPlayerUI.cnp, 
+                date_of_birth: newPlayerUI.dateOfBirth || null,
+                registration_number: newPlayerUI.registrationNumber, 
+                registration_date: newPlayerUI.registrationDate || null, 
+                phone: newPlayerUI.phone,
                 email: newPlayerUI.email, status: newPlayerUI.status, annual_visas: newPlayerUI.annualVisas,
                 photo_url: newPlayerUI.photoUrl, stats: newPlayerUI.stats,
             }).select().single();
@@ -473,8 +478,10 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
 
         try {
             const { data, error } = await getSupabase().from('players').update({
-                name: finalPlayer.name, team_id: finalPlayer.teamId, cnp: finalPlayer.cnp, date_of_birth: finalPlayer.dateOfBirth,
-                registration_number: finalPlayer.registrationNumber, registration_date: finalPlayer.registrationDate,
+                name: finalPlayer.name, team_id: finalPlayer.teamId, cnp: finalPlayer.cnp, 
+                date_of_birth: finalPlayer.dateOfBirth || null,
+                registration_number: finalPlayer.registrationNumber, 
+                registration_date: finalPlayer.registrationDate || null,
                 phone: finalPlayer.phone, email: finalPlayer.email, status: finalPlayer.status, annual_visas: finalPlayer.annualVisas,
                 photo_url: finalPlayer.photoUrl, stats: finalPlayer.stats,
             }).eq('id', finalPlayer.id).select();
@@ -492,8 +499,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         playerUpdater.delete(id);
         logAction('Delete Player', `Deleted player ID: ${id}`);
         try {
-            const { error } = await getSupabase().from('players').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('players').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch (error) {
             playerUpdater.handleError(originalState, error, 'delete');
         }
@@ -506,7 +514,13 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = arenas;
         arenaUpdater.add(newArena);
         try {
-            const { data: inserted, error } = await getSupabase().from('arenas').insert({ ...data, spectator_capacity: data.spectatorCapacity, has_floodlights: data.hasFloodlights, homologation_date: data.homologationDate, homologation_expiration: data.homologationExpiration, field_dimensions: data.fieldDimensions, goal_dimensions: data.goalDimensions }).select().single();
+            const payload = {
+                name: data.name, location: data.location, county: data.county,
+                field_dimensions: data.fieldDimensions, goal_dimensions: data.goalDimensions,
+                has_floodlights: data.hasFloodlights, spectator_capacity: data.spectatorCapacity,
+                homologation_date: data.homologationDate || null, homologation_expiration: data.homologationExpiration || null
+            };
+            const { data: inserted, error } = await getSupabase().from('arenas').insert(payload).select().single();
             if (error) throw error;
             setArenas(prev => prev.map(a => a.id === tempId ? { ...a, id: inserted.id } : a));
         } catch (error) {
@@ -517,7 +531,13 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = arenas;
         arenaUpdater.update(arena);
         try {
-            const { data, error } = await getSupabase().from('arenas').update({ ...arena, spectator_capacity: arena.spectatorCapacity, has_floodlights: arena.hasFloodlights, homologation_date: arena.homologationDate, homologation_expiration: arena.homologationExpiration, field_dimensions: arena.fieldDimensions, goal_dimensions: arena.goalDimensions }).eq('id', arena.id).select();
+            const payload = {
+                name: arena.name, location: arena.location, county: arena.county,
+                field_dimensions: arena.fieldDimensions, goal_dimensions: arena.goalDimensions,
+                has_floodlights: arena.hasFloodlights, spectator_capacity: arena.spectatorCapacity,
+                homologation_date: arena.homologationDate || null, homologation_expiration: arena.homologationExpiration || null
+            };
+            const { data, error } = await getSupabase().from('arenas').update(payload).eq('id', arena.id).select();
             if (error) throw error;
             if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch (error) {
@@ -528,8 +548,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = arenas;
         arenaUpdater.delete(id);
         try {
-            const { error } = await getSupabase().from('arenas').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('arenas').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch (error) {
             arenaUpdater.handleError(originalState, error, 'delete');
         }
@@ -564,8 +585,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = sports;
         sportUpdater.delete(id);
         try {
-            const { error } = await getSupabase().from('sports').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('sports').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch (error) {
             sportUpdater.handleError(originalState, error, 'delete');
         }
@@ -583,7 +605,12 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = referees;
         refereeUpdater.add(newReferee);
         try {
-            const { data: inserted, error } = await getSupabase().from('referees').insert({ ...refereeData, date_of_birth: refereeData.dateOfBirth, photo_url: newReferee.photoUrl }).select().single();
+            const payload = {
+                name: refereeData.name, county: refereeData.county, city: refereeData.city,
+                phone: refereeData.phone, email: refereeData.email, category: refereeData.category,
+                date_of_birth: refereeData.dateOfBirth || null, photo_url: newReferee.photoUrl
+            };
+            const { data: inserted, error } = await getSupabase().from('referees').insert(payload).select().single();
             if (error) throw error;
             setReferees(prev => prev.map(r => r.id === tempId ? { ...r, id: inserted.id } : r));
         } catch (error) {
@@ -596,7 +623,12 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = referees;
         refereeUpdater.update(finalReferee);
         try {
-            const { data, error } = await getSupabase().from('referees').update({ ...finalReferee, date_of_birth: finalReferee.dateOfBirth, photo_url: finalReferee.photoUrl }).eq('id', finalReferee.id).select();
+            const payload = {
+                name: finalReferee.name, county: finalReferee.county, city: finalReferee.city,
+                phone: finalReferee.phone, email: finalReferee.email, category: finalReferee.category,
+                date_of_birth: finalReferee.dateOfBirth || null, photo_url: finalReferee.photoUrl
+            };
+            const { data, error } = await getSupabase().from('referees').update(payload).eq('id', finalReferee.id).select();
             if (error) throw error;
             if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch (error) {
@@ -607,8 +639,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = referees;
         refereeUpdater.delete(id);
         try {
-            const { error } = await getSupabase().from('referees').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('referees').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch (error) {
             refereeUpdater.handleError(originalState, error, 'delete');
         }
@@ -626,7 +659,12 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = observers;
         observerUpdater.add(newObserver);
         try {
-            const { data: inserted, error } = await getSupabase().from('observers').insert({ ...observerData, date_of_birth: observerData.dateOfBirth, photo_url: newObserver.photoUrl }).select().single();
+            const payload = {
+                name: observerData.name, county: observerData.county, city: observerData.city,
+                phone: observerData.phone, email: observerData.email, category: observerData.category,
+                date_of_birth: observerData.dateOfBirth || null, photo_url: newObserver.photoUrl
+            };
+            const { data: inserted, error } = await getSupabase().from('observers').insert(payload).select().single();
             if (error) throw error;
             setObservers(prev => prev.map(o => o.id === tempId ? { ...o, id: inserted.id } : o));
         } catch (error) {
@@ -639,7 +677,12 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = observers;
         observerUpdater.update(finalObserver);
         try {
-            const { data, error } = await getSupabase().from('observers').update({ ...finalObserver, date_of_birth: finalObserver.dateOfBirth, photo_url: finalObserver.photoUrl }).eq('id', finalObserver.id).select();
+            const payload = {
+                name: finalObserver.name, county: finalObserver.county, city: finalObserver.city,
+                phone: finalObserver.phone, email: finalObserver.email, category: finalObserver.category,
+                date_of_birth: finalObserver.dateOfBirth || null, photo_url: finalObserver.photoUrl
+            };
+            const { data, error } = await getSupabase().from('observers').update(payload).eq('id', finalObserver.id).select();
             if (error) throw error;
             if (!data || data.length === 0) throw new Error("Update failed. This might be due to database permissions (RLS).");
         } catch (error) {
@@ -650,8 +693,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = observers;
         observerUpdater.delete(id);
         try {
-            const { error } = await getSupabase().from('observers').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('observers').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch (error) {
             observerUpdater.handleError(originalState, error, 'delete');
         }
@@ -686,8 +730,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = sanctions;
         sanctionUpdater.delete(id);
         try {
-            const { error } = await getSupabase().from('sanctions').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('sanctions').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch(error) {
             sanctionUpdater.handleError(originalState, error, 'delete');
         }
@@ -728,8 +773,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = transfers;
         transferUpdater.delete(id);
         try {
-            const { error } = await getSupabase().from('transfers').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('transfers').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch(error) {
             transferUpdater.handleError(originalState, error, 'delete');
         }
@@ -764,8 +810,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = playerRegistrations;
         registrationUpdater.delete(id);
         try {
-            const { error } = await getSupabase().from('player_registrations').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('player_registrations').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch(error) {
             registrationUpdater.handleError(originalState, error, 'delete');
         }
@@ -814,8 +861,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = articles;
         articleUpdater.delete(id);
         try {
-            const { error } = await getSupabase().from('articles').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('articles').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch (error) {
             articleUpdater.handleError(originalState, error, 'delete');
         }
@@ -854,8 +902,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = galleries;
         galleryUpdater.delete(id);
         try {
-            const { error } = await getSupabase().from('galleries').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('galleries').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch (error) {
             galleryUpdater.handleError(originalState, error, 'delete');
         }
@@ -901,8 +950,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const originalState = sponsors;
         sponsorUpdater.delete(id);
         try {
-            const { error } = await getSupabase().from('sponsors').delete().eq('id', id);
+            const { data, error } = await getSupabase().from('sponsors').delete().eq('id', id).select();
             if (error) throw error;
+            if (data.length === 0) throw new Error("Delete failed. This might be due to database permissions (RLS).");
         } catch (error) {
             sponsorUpdater.handleError(originalState, error, 'delete');
         }

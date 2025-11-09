@@ -86,7 +86,7 @@ export const mockArenas: Arena[] = [
     id: 'arena-1', 
     name: 'Arena Națională', 
     location: 'Bucharest', 
-    fields: ['Main Field'],
+// FIX: The `fields` property does not exist on the `Arena` type and has been removed.
     county: 'București',
     fieldDimensions: '105 x 68 m',
     goalDimensions: '7.32 x 2.44 m',
@@ -99,7 +99,7 @@ export const mockArenas: Arena[] = [
     id: 'arena-2', 
     name: 'Cluj Arena', 
     location: 'Cluj-Napoca', 
-    fields: ['Field 1', 'Field 2'],
+// FIX: The `fields` property does not exist on the `Arena` type and has been removed.
     county: 'Cluj',
     fieldDimensions: '105 x 68 m',
     goalDimensions: '7.32 x 2.44 m',

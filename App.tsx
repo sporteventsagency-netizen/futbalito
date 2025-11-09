@@ -44,10 +44,11 @@ import PublicAllLive from './pages/PublicAllLive.tsx';
 import PublicLiveMatchDetail from './pages/PublicLiveMatchDetail.tsx';
 import PublicNationalTeam from './pages/PublicNationalTeam.tsx';
 
-
+import { useCompetitions } from './context/CompetitionContext.tsx';
 import type { Page } from './types.ts';
 
 const App: React.FC = () => {
+    const { articles, galleries } = useCompetitions();
     // State to manage the current view
     const [page, setPage] = React.useState<Page>('DASHBOARD');
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -162,8 +163,10 @@ const App: React.FC = () => {
     };
 
     const handleEditArticle = (articleId: string) => {
-        const compId = 'comp-1'; // This is a simplification. In a real app, you'd get this from the article object.
-        setEditingArticle({ competitionId: compId, articleId });
+        const article = articles.find(a => a.id === articleId);
+        if (article) {
+            setEditingArticle({ competitionId: article.competitionId, articleId });
+        }
     };
     
     const handleManageMedia = (id: string) => {
@@ -175,8 +178,10 @@ const App: React.FC = () => {
     };
 
     const handleEditGallery = (galleryId: string) => {
-        const compId = 'comp-1'; // Simplification
-        setEditingGallery({ competitionId: compId, galleryId });
+        const gallery = galleries.find(g => g.id === galleryId);
+        if (gallery) {
+            setEditingGallery({ competitionId: gallery.competitionId, galleryId });
+        }
     };
     
     const handleManageSponsors = (id: string) => {
@@ -210,7 +215,6 @@ const App: React.FC = () => {
         switch (page) {
             case 'DASHBOARD': return <Dashboard setPage={navigateTo} />;
             case 'BROWSE': return <Browse />;
-            // FIX: The `setPage` prop is not defined in `ManageCompetitionsProps`. It is removed from the component invocation.
             case 'MANAGE_COMPETITIONS': return <ManageCompetitions onViewCompetition={handleViewCompetition} />;
             case 'MANAGE_TEAMS': return <ManageTeams />;
             case 'MANAGE_PLAYERS': return <ManagePlayers onViewPlayerDetail={handleViewPlayerDetail} />;

@@ -6,10 +6,9 @@ import {
     Standing, PortalConfig, PublicConfig, NationalTeam, NationalSquadPlayer, Comment
 } from '../types.ts';
 import { 
-    mockMatches, mockPlayers, mockOrganizationSettings,
-    mockUsers, mockRoles, mockInvoices, mockAuditLog, mockCounties, mockArenas,
-    mockSanctions, mockReferees, mockObservers, mockSports, mockArticles, mockMediaImages,
-    mockGalleries, mockSponsors, mockTransfers, mockPlayerRegistrations, mockPortalConfig,
+    mockOrganizationSettings,
+    mockUsers, mockRoles, mockInvoices, mockAuditLog, 
+    mockPortalConfig,
     MOCK_NATIONAL_TEAM, MOCK_NATIONAL_SQUAD, MOCK_INTERNATIONAL_MATCHES
 } from './mock_data.ts';
 import { generateBergerTable } from '../utils/bergerTable.ts';
@@ -120,34 +119,64 @@ interface CompetitionContextType {
 
 const CompetitionContext = createContext<CompetitionContextType | undefined>(undefined);
 
+// Helper function for optimistic updates
+const createOptimisticUpdater = <T extends { id: string }>(setter: React.Dispatch<React.SetStateAction<T[]>>, entityName: string) => {
+    return {
+        add: (item: T) => setter(prev => [...prev, item]),
+        update: (item: T) => setter(prev => prev.map(i => i.id === item.id ? item : i)),
+        delete: (id: string) => setter(prev => prev.filter(i => i.id !== id)),
+        handleError: (originalState: T[], error: any, action: 'add' | 'update' | 'delete') => {
+            console.error(`[Supabase] Error ${action}ing ${entityName}:`, error);
+            alert(`Failed to ${action} ${entityName}: ${error.message}\n\nHint: Check if the '${entityName}s' table has the correct RLS policy enabled.`);
+            setter(originalState);
+        }
+    };
+};
+
+
 export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    // All state managed here
     const [teams, setTeams] = useState<Team[]>([]);
     const [competitions, setCompetitions] = useState<Competition[]>([]);
-    const [matches, setMatches] = useState<Match[]>([...mockMatches, ...MOCK_INTERNATIONAL_MATCHES]);
-    const [players, setPlayers] = useState<Player[]>(mockPlayers);
+    const [matches, setMatches] = useState<Match[]>([]);
+    const [players, setPlayers] = useState<Player[]>([]);
     const [organizationSettings, setOrganizationSettings] = useState<OrganizationSettings>(mockOrganizationSettings);
     const [users, setUsers] = useState<User[]>(mockUsers);
     const [currentUser, setCurrentUserState] = useState<User | null>(mockUsers[0]);
     const [roles, setRoles] = useState<Role[]>(mockRoles);
     const [invoices] = useState<Invoice[]>(mockInvoices);
     const [auditLog, setAuditLog] = useState<AuditLog[]>(mockAuditLog);
-    const [counties, setCounties] = useState<County[]>(mockCounties);
-    const [arenas, setArenas] = useState<Arena[]>(mockArenas);
-    const [sports, setSports] = useState<Sport[]>(mockSports);
-    const [sanctions, setSanctions] = useState<Sanction[]>(mockSanctions);
-    const [referees, setReferees] = useState<Referee[]>(mockReferees);
-    const [observers, setObservers] = useState<Observer[]>(mockObservers);
-    const [articles, setArticles] = useState<Article[]>(mockArticles);
-    const [mediaImages, setMediaImages] = useState<MediaImage[]>(mockMediaImages);
-    const [galleries, setGalleries] = useState<Gallery[]>(mockGalleries);
-    const [sponsors, setSponsors] = useState<Sponsor[]>(mockSponsors);
+    const [counties, setCounties] = useState<County[]>([]);
+    const [arenas, setArenas] = useState<Arena[]>([]);
+    const [sports, setSports] = useState<Sport[]>([]);
+    const [sanctions, setSanctions] = useState<Sanction[]>([]);
+    const [referees, setReferees] = useState<Referee[]>([]);
+    const [observers, setObservers] = useState<Observer[]>([]);
+    const [articles, setArticles] = useState<Article[]>([]);
+    const [mediaImages, setMediaImages] = useState<MediaImage[]>([]);
+    const [galleries, setGalleries] = useState<Gallery[]>([]);
+    const [sponsors, setSponsors] = useState<Sponsor[]>([]);
     const [portalConfig, setPortalConfig] = useState<PortalConfig>(mockPortalConfig);
-    const [transfers, setTransfers] = useState<Transfer[]>(mockTransfers);
-    const [playerRegistrations, setPlayerRegistrations] = useState<PlayerRegistration[]>(mockPlayerRegistrations);
+    const [transfers, setTransfers] = useState<Transfer[]>([]);
+    const [playerRegistrations, setPlayerRegistrations] = useState<PlayerRegistration[]>([]);
     const [nationalTeam] = useState<NationalTeam>(MOCK_NATIONAL_TEAM);
     const [nationalSquad, setNationalSquad] = useState<NationalSquadPlayer[]>(MOCK_NATIONAL_SQUAD);
     const [comments, setComments] = useState<Comment[]>([]);
+
+    // Updaters for optimistic UI
+    const teamUpdater = createOptimisticUpdater(setTeams, 'team');
+    const playerUpdater = createOptimisticUpdater(setPlayers, 'player');
+    const arenaUpdater = createOptimisticUpdater(setArenas, 'arena');
+    const sportUpdater = createOptimisticUpdater(setSports, 'sport');
+    const refereeUpdater = createOptimisticUpdater(setReferees, 'referee');
+    const observerUpdater = createOptimisticUpdater(setObservers, 'observer');
+    const countyUpdater = createOptimisticUpdater(setCounties, 'county');
+    const sanctionUpdater = createOptimisticUpdater(setSanctions, 'sanction');
+    const transferUpdater = createOptimisticUpdater(setTransfers, 'transfer');
+    const registrationUpdater = createOptimisticUpdater(setPlayerRegistrations, 'player registration');
+    const articleUpdater = createOptimisticUpdater(setArticles, 'article');
+    const galleryUpdater = createOptimisticUpdater(setGalleries, 'gallery');
+    const sponsorUpdater = createOptimisticUpdater(setSponsors, 'sponsor');
+
 
     useEffect(() => {
         let isMounted = true;
@@ -155,43 +184,54 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         const fetchInitialData = async () => {
             const supabase = getSupabase();
             
-            // Fetch Competitions
-            const { data: competitionsData, error: competitionsError } = await supabase
-                .from('competitions')
-                .select('*, competition_teams(team_id)')
-                .order('created_at', { ascending: false });
-    
-            if (competitionsError) {
-                console.error('[Supabase] Error fetching competitions:', competitionsError);
-            } else if (isMounted) {
-                const normalizedCompetitions = (competitionsData ?? []).map((row: any) => ({
-                    id: row.id,
-                    name: row.name,
-                    season: row.season,
-                    logoUrl: row.logo_url ?? '',
-                    status: row.status ?? 'Upcoming',
-                    format: row.format ?? 'league',
-                    twoLegged: row.two_legged ?? false,
-                    teamsPerGroup: row.teams_per_group ?? 4,
-                    defaultArenaId: row.default_arena_id ?? undefined,
-                    isPublic: row.is_public ?? false,
-                    county: row.county ?? undefined,
-                    sportId: row.sport_id ?? undefined,
-                    pointsForWin: row.points_for_win ?? 3,
-                    pointsForTieBreakWin: row.points_for_tie_break_win ?? 2,
-                    publicConfig: row.public_config ?? {},
-                    teamIds: row.competition_teams ? row.competition_teams.map((ct: { team_id: string }) => ct.team_id) : [],
-                }));
-                setCompetitions(normalizedCompetitions as Competition[]);
-            }
+            const fetchTable = async (tableName: string, setter: (data: any) => void, select = '*') => {
+                const { data, error } = await supabase.from(tableName).select(select).order( 'created_at' as any, { ascending: false });
+                if (error) console.error(`[Supabase] Error fetching ${tableName}:`, error);
+                else if (isMounted) setter(data);
+            };
 
-            // Fetch Teams
-            const { data: teamsData, error: teamsError } = await supabase.from('teams').select('*').order('name');
-            if(teamsError) {
-                console.error('[Supabase] Error fetching teams:', teamsError);
-            } else if (isMounted) {
-                setTeams(teamsData as Team[]);
-            }
+            // Fetch all data in parallel
+            await Promise.all([
+                fetchTable('competitions', (data) => {
+                    const normalized = (data ?? []).map((row: any) => ({
+                        id: row.id, name: row.name, season: row.season, logoUrl: row.logo_url ?? '', status: row.status ?? 'Upcoming',
+                        format: row.format ?? 'league', twoLegged: row.two_legged ?? false, teamsPerGroup: row.teams_per_group ?? 4,
+                        defaultArenaId: row.default_arena_id, isPublic: row.is_public ?? false, county: row.county, sportId: row.sport_id,
+                        pointsForWin: row.points_for_win ?? 3, pointsForTieBreakWin: row.points_for_tie_break_win, publicConfig: row.public_config ?? {},
+                        teamIds: row.competition_teams ? row.competition_teams.map((ct: { team_id: string }) => ct.team_id) : [],
+                    }));
+                    setCompetitions(normalized as Competition[]);
+                }, '*, competition_teams(team_id)'),
+                
+                fetchTable('teams', (data) => setTeams( (data as any[] ?? []).map(t => ({...t, logoUrl: t.logo_url, foundedYear: t.founded_year, clubColors: t.club_colors, competitionOrganizer: t.competition_organizer})) as Team[])),
+                fetchTable('players', (data) => setPlayers( (data as any[] ?? []).map(p => ({...p, teamId: p.team_id, photoUrl: p.photo_url, dateOfBirth: p.date_of_birth, registrationNumber: p.registration_number, registrationDate: p.registration_date, annualVisas: p.annual_visas || []})) as Player[])),
+                fetchTable('matches', (data) => {
+                     const realMatches = (data as any[] ?? []).map(m => ({
+                        ...m, 
+                        homeTeam: teams.find(t => t.id === m.home_team_id)!, 
+                        awayTeam: teams.find(t => t.id === m.away_team_id)!,
+                        homeScore: m.home_score,
+                        awayScore: m.away_score,
+                        liveStreamUrl: m.live_stream_url,
+                        isInternational: m.is_international,
+                        elapsedSeconds: m.elapsed_seconds,
+                        events: [], // TODO: Fetch events
+                     }));
+                     setMatches([...realMatches, ...MOCK_INTERNATIONAL_MATCHES]);
+                }),
+                fetchTable('sports', setSports),
+                fetchTable('arenas', setArenas),
+                fetchTable('referees', (data) => setReferees((data as any[] ?? []).map(r => ({...r, dateOfBirth: r.date_of_birth, photoUrl: r.photo_url})) as Referee[])),
+                fetchTable('observers', (data) => setObservers((data as any[] ?? []).map(o => ({...o, dateOfBirth: o.date_of_birth, photoUrl: o.photo_url})) as Observer[])),
+                fetchTable('counties', setCounties),
+                fetchTable('sanctions', (data) => setSanctions((data as any[] ?? []).map(s => ({...s, teamId: s.team_id, playerId: s.player_id})) as Sanction[])),
+                fetchTable('transfers', (data) => setTransfers((data as any[] ?? []).map(t => ({...t, playerId: t.player_id, fromTeamId: t.from_team_id, toTeamId: t.to_team_id})) as Transfer[])),
+                fetchTable('player_registrations', (data) => setPlayerRegistrations((data as any[] ?? []).map(pr => ({...pr, playerId: pr.player_id, registrationNumber: pr.registration_number, validFrom: pr.valid_from, validUntil: pr.valid_until})) as PlayerRegistration[])),
+                fetchTable('articles', (data) => setArticles((data as any[] ?? []).map(a => ({...a, competitionId: a.competition_id, featuredImageUrl: a.featured_image_url, createdAt: a.created_at})) as Article[])),
+                fetchTable('galleries', (data) => setGalleries((data as any[] ?? []).map(g => ({...g, competitionId: g.competition_id, imageIds: g.image_ids || []})) as Gallery[])),
+                fetchTable('sponsors', (data) => setSponsors((data as any[] ?? []).map(s => ({...s, competitionId: s.competition_id, websiteUrl: s.website_url, logoUrl: s.logo_url})) as Sponsor[])),
+                fetchTable('media_images', (data) => setMediaImages((data as any[] ?? []).map(mi => ({...mi, competitionId: mi.competition_id})) as MediaImage[]))
+            ]);
         };
     
         fetchInitialData();
@@ -223,33 +263,64 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         setAuditLog(prev => [newLog, ...prev]);
     }
     
-    // Simple CRUD operations
-    const addTeam = (data: Omit<Team, 'id' | 'logoUrl'> & { logoFile?: File | null }) => {
+    // --- TEAMS ---
+    const addTeam = async (data: Omit<Team, 'id' | 'logoUrl'> & { logoFile?: File | null }) => {
         const { logoFile, ...rest } = data;
+        const tempId = `team-${Date.now()}`;
         const newTeam: Team = {
-            id: `team-${Date.now()}`,
+            id: tempId,
             logoUrl: logoFile ? URL.createObjectURL(logoFile) : `https://picsum.photos/seed/${Date.now()}/200`,
             ...rest
         };
-        setTeams(prev => [...prev, newTeam]);
+        const originalState = teams;
+        teamUpdater.add(newTeam);
         logAction('Create Team', `Created team: ${data.name}`);
-    };
 
-    const updateTeam = (updatedTeam: Team, logoFile?: File | null) => {
-        let finalTeam = { ...updatedTeam };
-        if (logoFile) {
-            finalTeam.logoUrl = URL.createObjectURL(logoFile);
+        try {
+            const { error, data: inserted } = await getSupabase().from('teams').insert({
+                name: rest.name, country: rest.country, county: rest.county, city: rest.city, address: rest.address,
+                founded_year: rest.foundedYear, club_colors: rest.clubColors, president: rest.president,
+                coach: rest.coach, status: rest.status, logo_url: newTeam.logoUrl
+            }).select().single();
+            if (error) throw error;
+            setTeams(prev => prev.map(t => t.id === tempId ? { ...t, id: inserted.id } : t));
+        } catch (error) {
+            teamUpdater.handleError(originalState, error, 'add');
         }
-        setTeams(prev => prev.map(t => t.id === finalTeam.id ? finalTeam : t));
+    };
+
+    const updateTeam = async (updatedTeam: Team, logoFile?: File | null) => {
+        let finalTeam = { ...updatedTeam };
+        if (logoFile) finalTeam.logoUrl = URL.createObjectURL(logoFile);
+        const originalState = teams;
+        teamUpdater.update(finalTeam);
         logAction('Update Team', `Updated team: ${finalTeam.name}`);
+
+        try {
+            const { error } = await getSupabase().from('teams').update({
+                name: finalTeam.name, country: finalTeam.country, county: finalTeam.county, city: finalTeam.city, address: finalTeam.address,
+                founded_year: finalTeam.foundedYear, club_colors: finalTeam.clubColors, president: finalTeam.president,
+                coach: finalTeam.coach, status: finalTeam.status, logo_url: finalTeam.logoUrl
+            }).eq('id', finalTeam.id);
+            if (error) throw error;
+        } catch(error) {
+            teamUpdater.handleError(originalState, error, 'update');
+        }
     };
 
-    const deleteTeam = (id: string) => {
-        const teamName = teams.find(t=> t.id === id)?.name || 'Unknown';
-        setTeams(prev => prev.filter(t => t.id !== id));
-        logAction('Delete Team', `Deleted team: ${teamName} (ID: ${id})`);
+    const deleteTeam = async (id: string) => {
+        const originalState = teams;
+        teamUpdater.delete(id);
+        logAction('Delete Team', `Deleted team ID: ${id}`);
+        try {
+            const { error } = await getSupabase().from('teams').delete().eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            teamUpdater.handleError(originalState, error, 'delete');
+        }
     };
 
+    // --- COMPETITIONS ---
     const addCompetition = (data: Omit<Competition, 'id' | 'logoUrl' | 'status'> & { logoFile?: File | null }) => {
         (async () => {
             const supabase = getSupabase();
@@ -269,43 +340,25 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     
             try {
                 const insertPayload = {
-                    name: newCompUI.name,
-                    season: (newCompUI as any).season ?? String(new Date().getFullYear()),
-                    logo_url: newCompUI.logoUrl,
-                    status: newCompUI.status,
-                    format: (newCompUI as any).format,
-                    two_legged: (newCompUI as any).twoLegged,
-                    teams_per_group: (newCompUI as any).teamsPerGroup,
+                    name: newCompUI.name, season: (newCompUI as any).season ?? String(new Date().getFullYear()),
+                    logo_url: newCompUI.logoUrl, status: newCompUI.status, format: (newCompUI as any).format,
+                    two_legged: (newCompUI as any).twoLegged, teams_per_group: (newCompUI as any).teamsPerGroup,
                     default_arena_id: isUuid((newCompUI as any).defaultArenaId) ? (newCompUI as any).defaultArenaId : null,
-                    is_public: (newCompUI as any).isPublic,
-                    county: (newCompUI as any).county,
+                    is_public: (newCompUI as any).isPublic, county: (newCompUI as any).county,
                     sport_id: isUuid((newCompUI as any).sportId) ? (newCompUI as any).sportId : null,
-                    points_for_win: (newCompUI as any).pointsForWin,
-                    points_for_tie_break_win: (newCompUI as any).pointsForTieBreakWin,
-                    public_config: {},
+                    points_for_win: (newCompUI as any).pointsForWin, points_for_tie_break_win: (newCompUI as any).pointsForTieBreakWin, public_config: {},
                 };
     
-                const { data: inserted, error: insertError } = await supabase
-                    .from('competitions')
-                    .insert(insertPayload)
-                    .select('*')
-                    .single();
+                const { data: inserted, error: insertError } = await supabase.from('competitions').insert(insertPayload).select('*').single();
     
                 if (insertError) {
-                    console.error('[Supabase] insert competition error:', insertError);
-                    alert(`Failed to save competition: ${insertError.message}\n\nHint: Check if the 'competitions' table has an INSERT policy enabled in Supabase for all users.`);
-                    setCompetitions(prev => prev.filter(c => c.id !== tempId)); // Revert optimistic update
-                    return;
+                    throw insertError;
                 }
     
                 if (inserted && initialTeamIds && initialTeamIds.length > 0) {
-                    const competitionTeamsPayload = initialTeamIds.map(teamId => ({
-                        competition_id: inserted.id,
-                        team_id: teamId,
-                    }));
+                    const competitionTeamsPayload = initialTeamIds.map(teamId => ({ competition_id: inserted.id, team_id: teamId }));
                     const { error: joinError } = await supabase.from('competition_teams').insert(competitionTeamsPayload);
                     if (joinError) {
-                        console.error('[Supabase] insert competition_teams error:', joinError);
                         alert(`Competition was created, but failed to add teams: ${joinError.message}\n\nHint: Check if the 'competition_teams' table has an INSERT policy enabled in Supabase for all users.`);
                     }
                 }
@@ -314,91 +367,579 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
             } catch (e: any) {
                 console.error('[Supabase] unexpected insert error:', e);
                 alert(`An unexpected error occurred: ${e.message}`);
-                setCompetitions(prev => prev.filter(c => c.id !== tempId)); // Revert optimistic update
+                setCompetitions(prev => prev.filter(c => c.id !== tempId));
             }
         })();
     };
     
     const updateCompetition = (updatedComp: Competition) => {
+        const originalState = competitions;
         setCompetitions(prev => prev.map(c => c.id === updatedComp.id ? updatedComp : c));
         logAction('Update Competition', `Updated competition: ${updatedComp.name}`);
     
         (async () => {
-            const supabase = getSupabase();
-            const { teamIds, ...compData } = updatedComp;
-            const updatePayload = {
-                name: compData.name, season: compData.season, logo_url: compData.logoUrl, status: compData.status,
-                format: compData.format, two_legged: compData.twoLegged, teams_per_group: compData.teamsPerGroup,
-                default_arena_id: compData.defaultArenaId, is_public: compData.isPublic, county: compData.county,
-                sport_id: compData.sportId, points_for_win: compData.pointsForWin,
-                points_for_tie_break_win: compData.pointsForTieBreakWin, public_config: compData.publicConfig
-            };
-    
-            const { error: updateError } = await supabase.from('competitions').update(updatePayload).match({ id: updatedComp.id });
-            if (updateError) { console.error('[Supabase] update competition error:', updateError); return; }
-    
-            const { data: currentTeamsInDB, error: fetchError } = await supabase.from('competition_teams').select('team_id').eq('competition_id', updatedComp.id);
-            if(fetchError) { console.error('[Supabase] fetch competition_teams error:', fetchError); return; }
-            
-            const currentTeamIdsInDB = currentTeamsInDB?.map(t => t.team_id) || [];
-            const teamsToAdd = teamIds.filter(id => !currentTeamIdsInDB.includes(id));
-            const teamsToRemove = currentTeamIdsInDB.filter(id => !teamIds.includes(id));
-    
-            if (teamsToAdd.length > 0) {
-                const { error } = await supabase.from('competition_teams').insert(teamsToAdd.map(team_id => ({ competition_id: updatedComp.id, team_id })));
-                if(error) console.error('[Supabase] Error adding teams to competition:', error);
-            }
-            if (teamsToRemove.length > 0) {
-                const { error } = await supabase.from('competition_teams').delete().in('team_id', teamsToRemove).eq('competition_id', updatedComp.id);
-                if(error) console.error('[Supabase] Error removing teams from competition:', error);
+            try {
+                const supabase = getSupabase();
+                const { teamIds, ...compData } = updatedComp;
+                const updatePayload = {
+                    name: compData.name, season: compData.season, logo_url: compData.logoUrl, status: compData.status,
+                    format: compData.format, two_legged: compData.twoLegged, teams_per_group: compData.teamsPerGroup,
+                    default_arena_id: compData.defaultArenaId, is_public: compData.isPublic, county: compData.county,
+                    sport_id: compData.sportId, points_for_win: compData.pointsForWin,
+                    points_for_tie_break_win: compData.pointsForTieBreakWin, public_config: compData.publicConfig
+                };
+        
+                const { error: updateError } = await supabase.from('competitions').update(updatePayload).match({ id: updatedComp.id });
+                if (updateError) throw updateError;
+        
+                const { data: currentTeamsInDB, error: fetchError } = await supabase.from('competition_teams').select('team_id').eq('competition_id', updatedComp.id);
+                if(fetchError) throw fetchError;
+                
+                const currentTeamIdsInDB = currentTeamsInDB?.map(t => t.team_id) || [];
+                const teamsToAdd = teamIds.filter(id => !currentTeamIdsInDB.includes(id));
+                const teamsToRemove = currentTeamIdsInDB.filter(id => !teamIds.includes(id));
+        
+                if (teamsToAdd.length > 0) {
+                    const { error } = await supabase.from('competition_teams').insert(teamsToAdd.map(team_id => ({ competition_id: updatedComp.id, team_id })));
+                    if(error) console.error('[Supabase] Error adding teams to competition:', error);
+                }
+                if (teamsToRemove.length > 0) {
+                    const { error } = await supabase.from('competition_teams').delete().in('team_id', teamsToRemove).eq('competition_id', updatedComp.id);
+                    if(error) console.error('[Supabase] Error removing teams from competition:', error);
+                }
+            } catch(error) {
+                 console.error('[Supabase] update competition error:', error);
+                 setCompetitions(originalState);
             }
         })();
     };
 
     const deleteCompetition = (id: string) => {
-        const compName = competitions.find(c => c.id === id)?.name || 'Unknown';
+        const originalState = competitions;
         setCompetitions(prev => prev.filter(c => c.id !== id));
-        logAction('Delete Competition', `Deleted competition: ${compName} (ID: ${id})`);
+        logAction('Delete Competition', `Deleted competition ID: ${id}`);
     
         (async () => {
-            const supabase = getSupabase();
-            const { error } = await supabase.from('competitions').delete().match({ id });
-            if (error) {
+            try {
+                const supabase = getSupabase();
+                const { error } = await supabase.from('competitions').delete().match({ id });
+                if (error) throw error;
+            } catch(error) {
                 console.error('[Supabase] Error deleting competition:', error);
                 alert('Failed to delete competition from the database. Please refresh.');
+                setCompetitions(originalState);
             }
         })();
     };
-
-    const addPlayer = (data: Omit<Player, 'id' | 'stats' | 'photoUrl'> & { photoFile?: File | null }) => {
+    
+    // --- PLAYERS ---
+    const addPlayer = async (data: Omit<Player, 'id' | 'stats' | 'photoUrl'> & { photoFile?: File | null }) => {
         const { photoFile, ...playerData } = data;
-        const newPlayer: Player = {
-            id: `player-${Date.now()}`,
-            stats: { goals: 0, assists: 0, yellowCards: 0, redCards: 0 },
+        const tempId = `player-${Date.now()}`;
+        const newPlayerUI: Player = {
+            id: tempId, stats: { goals: 0, assists: 0, yellowCards: 0, redCards: 0 },
             photoUrl: photoFile ? URL.createObjectURL(photoFile) : `https://avatar.iran.liara.run/username?username=${playerData.name.replace(/\s/g, '+')}`,
             ...playerData
         };
-        setPlayers(prev => [...prev, newPlayer]);
+        const originalState = players;
+        playerUpdater.add(newPlayerUI);
         logAction('Add Player', `Added player: ${data.name}`);
-    };
 
-    const updatePlayer = (updatedPlayer: Player, photoFile?: File | null) => {
-        let finalPlayer = { ...updatedPlayer };
-        if (photoFile) {
-            finalPlayer.photoUrl = URL.createObjectURL(photoFile);
+        try {
+            const { data: inserted, error } = await getSupabase().from('players').insert({
+                name: newPlayerUI.name, team_id: newPlayerUI.teamId, cnp: newPlayerUI.cnp, date_of_birth: newPlayerUI.dateOfBirth,
+                registration_number: newPlayerUI.registrationNumber, registration_date: newPlayerUI.registrationDate, phone: newPlayerUI.phone,
+                email: newPlayerUI.email, status: newPlayerUI.status, annual_visas: newPlayerUI.annualVisas,
+                photo_url: newPlayerUI.photoUrl, stats: newPlayerUI.stats,
+            }).select().single();
+            if (error) throw error;
+            setPlayers(prev => prev.map(p => p.id === tempId ? { ...p, id: inserted.id } : p));
+        } catch (error) {
+            playerUpdater.handleError(originalState, error, 'add');
         }
-        setPlayers(prev => prev.map(p => p.id === finalPlayer.id ? finalPlayer : p));
-        logAction('Update Player', `Updated player: ${finalPlayer.name}`);
     };
 
-    const deletePlayer = (id: string) => {
-        const playerName = players.find(p => p.id === id)?.name || 'Unknown';
-        setPlayers(prev => prev.filter(p => p.id !== id));
-        logAction('Delete Player', `Deleted player: ${playerName} (ID: ${id})`);
+    const updatePlayer = async (updatedPlayer: Player, photoFile?: File | null) => {
+        let finalPlayer = { ...updatedPlayer };
+        if (photoFile) finalPlayer.photoUrl = URL.createObjectURL(photoFile);
+        const originalState = players;
+        playerUpdater.update(finalPlayer);
+        logAction('Update Player', `Updated player: ${finalPlayer.name}`);
+
+        try {
+            const { error } = await getSupabase().from('players').update({
+                name: finalPlayer.name, team_id: finalPlayer.teamId, cnp: finalPlayer.cnp, date_of_birth: finalPlayer.dateOfBirth,
+                registration_number: finalPlayer.registrationNumber, registration_date: finalPlayer.registrationDate,
+                phone: finalPlayer.phone, email: finalPlayer.email, status: finalPlayer.status, annual_visas: finalPlayer.annualVisas,
+                photo_url: finalPlayer.photoUrl, stats: finalPlayer.stats,
+            }).eq('id', finalPlayer.id);
+            if (error) throw error;
+        } catch (error) {
+            playerUpdater.handleError(originalState, error, 'update');
+        }
+    };
+
+    const deletePlayer = async (id: string) => {
+        const originalState = players;
+        playerUpdater.delete(id);
+        logAction('Delete Player', `Deleted player ID: ${id}`);
+        try {
+            const { error } = await getSupabase().from('players').delete().eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            playerUpdater.handleError(originalState, error, 'delete');
+        }
     };
     
+    // --- ARENAS ---
+    const addArena = async (data: Omit<Arena, 'id'>) => {
+        const tempId = `arena-${Date.now()}`;
+        const newArena = { id: tempId, ...data };
+        const originalState = arenas;
+        arenaUpdater.add(newArena);
+        try {
+            const { data: inserted, error } = await getSupabase().from('arenas').insert({ ...data, spectator_capacity: data.spectatorCapacity, has_floodlights: data.hasFloodlights, homologation_date: data.homologationDate, homologation_expiration: data.homologationExpiration, field_dimensions: data.fieldDimensions, goal_dimensions: data.goalDimensions }).select().single();
+            if (error) throw error;
+            setArenas(prev => prev.map(a => a.id === tempId ? { ...a, id: inserted.id } : a));
+        } catch (error) {
+            arenaUpdater.handleError(originalState, error, 'add');
+        }
+    };
+    const updateArena = async (arena: Arena) => {
+        const originalState = arenas;
+        arenaUpdater.update(arena);
+        try {
+            const { error } = await getSupabase().from('arenas').update({ ...arena, spectator_capacity: arena.spectatorCapacity, has_floodlights: arena.hasFloodlights, homologation_date: arena.homologationDate, homologation_expiration: arena.homologationExpiration, field_dimensions: arena.fieldDimensions, goal_dimensions: arena.goalDimensions }).eq('id', arena.id);
+            if (error) throw error;
+        } catch (error) {
+            arenaUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deleteArena = async (id: string) => {
+        const originalState = arenas;
+        arenaUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('arenas').delete().eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            arenaUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+
+    // --- SPORTS ---
+    const addSport = async (data: { name: string; description: string; }) => {
+        const tempId = `sport-${Date.now()}`;
+        const newSport = { id: tempId, ...data };
+        const originalState = sports;
+        sportUpdater.add(newSport);
+        try {
+            const { data: inserted, error } = await getSupabase().from('sports').insert(data).select().single();
+            if (error) throw error;
+            setSports(prev => prev.map(s => s.id === tempId ? { ...s, id: inserted.id } : s));
+        } catch (error) {
+            sportUpdater.handleError(originalState, error, 'add');
+        }
+    };
+    const updateSport = async (sport: Sport) => {
+        const originalState = sports;
+        sportUpdater.update(sport);
+        try {
+            const { error } = await getSupabase().from('sports').update({ name: sport.name, description: sport.description }).eq('id', sport.id);
+            if (error) throw error;
+        } catch (error) {
+            sportUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deleteSport = async (id: string) => {
+        const originalState = sports;
+        sportUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('sports').delete().eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            sportUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+    
+    // --- REFEREES ---
+    const addReferee = async (data: Omit<Referee, 'id' | 'photoUrl'> & { photoFile?: File | null }) => {
+        const { photoFile, ...refereeData } = data;
+        const tempId = `ref-${Date.now()}`;
+        const newReferee: Referee = {
+            id: tempId,
+            photoUrl: photoFile ? URL.createObjectURL(photoFile) : `https://avatar.iran.liara.run/username?username=${refereeData.name.replace(/\s/g, '+')}`,
+            ...refereeData
+        };
+        const originalState = referees;
+        refereeUpdater.add(newReferee);
+        try {
+            const { data: inserted, error } = await getSupabase().from('referees').insert({ ...refereeData, date_of_birth: refereeData.dateOfBirth, photo_url: newReferee.photoUrl }).select().single();
+            if (error) throw error;
+            setReferees(prev => prev.map(r => r.id === tempId ? { ...r, id: inserted.id } : r));
+        } catch (error) {
+            refereeUpdater.handleError(originalState, error, 'add');
+        }
+    };
+    const updateReferee = async (referee: Referee, photoFile?: File | null) => {
+        let finalReferee = { ...referee };
+        if (photoFile) finalReferee.photoUrl = URL.createObjectURL(photoFile);
+        const originalState = referees;
+        refereeUpdater.update(finalReferee);
+        try {
+            const { error } = await getSupabase().from('referees').update({ ...finalReferee, date_of_birth: finalReferee.dateOfBirth, photo_url: finalReferee.photoUrl }).eq('id', finalReferee.id);
+            if (error) throw error;
+        } catch (error) {
+            refereeUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deleteReferee = async (id: string) => {
+        const originalState = referees;
+        refereeUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('referees').delete().eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            refereeUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+    
+    // --- OBSERVERS ---
+    const addObserver = async (data: Omit<Observer, 'id' | 'photoUrl'> & { photoFile?: File | null }) => {
+        const { photoFile, ...observerData } = data;
+        const tempId = `obs-${Date.now()}`;
+        const newObserver: Observer = {
+            id: tempId,
+            photoUrl: photoFile ? URL.createObjectURL(photoFile) : `https://avatar.iran.liara.run/username?username=${observerData.name.replace(/\s/g, '+')}`,
+            ...observerData
+        };
+        const originalState = observers;
+        observerUpdater.add(newObserver);
+        try {
+            const { data: inserted, error } = await getSupabase().from('observers').insert({ ...observerData, date_of_birth: observerData.dateOfBirth, photo_url: newObserver.photoUrl }).select().single();
+            if (error) throw error;
+            setObservers(prev => prev.map(o => o.id === tempId ? { ...o, id: inserted.id } : o));
+        } catch (error) {
+            observerUpdater.handleError(originalState, error, 'add');
+        }
+    };
+    const updateObserver = async (observer: Observer, photoFile?: File | null) => {
+        let finalObserver = { ...observer };
+        if (photoFile) finalObserver.photoUrl = URL.createObjectURL(photoFile);
+        const originalState = observers;
+        observerUpdater.update(finalObserver);
+        try {
+            const { error } = await getSupabase().from('observers').update({ ...finalObserver, date_of_birth: finalObserver.dateOfBirth, photo_url: finalObserver.photoUrl }).eq('id', finalObserver.id);
+            if (error) throw error;
+        } catch (error) {
+            observerUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deleteObserver = async (id: string) => {
+        const originalState = observers;
+        observerUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('observers').delete().eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            observerUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+
+    // --- COUNTIES ---
+    const addCounty = async (data: { name: string }) => {
+        const tempId = `county-${Date.now()}`;
+        const newCounty = { id: tempId, ...data };
+        const originalState = counties;
+        countyUpdater.add(newCounty);
+        try {
+            const { data: inserted, error } = await getSupabase().from('counties').insert(data).select().single();
+            if (error) throw error;
+            setCounties(prev => prev.map(c => c.id === tempId ? { ...c, id: inserted.id } : c));
+        } catch (error) {
+            countyUpdater.handleError(originalState, error, 'add');
+        }
+    };
+    const updateCounty = async (county: County) => {
+        const originalState = counties;
+        countyUpdater.update(county);
+        try {
+            const { error } = await getSupabase().from('counties').update({ name: county.name }).eq('id', county.id);
+            if (error) throw error;
+        } catch(error) {
+            countyUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deleteCounty = async (id: string) => {
+        const originalState = counties;
+        countyUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('counties').delete().eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            countyUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+
+    // --- SANCTIONS ---
+    const addSanction = async (data: Omit<Sanction, 'id'>) => {
+        const tempId = `sanction-${Date.now()}`;
+        const newSanction = { id: tempId, ...data };
+        const originalState = sanctions;
+        sanctionUpdater.add(newSanction);
+        try {
+            const { data: inserted, error } = await getSupabase().from('sanctions').insert({ ...data, team_id: data.teamId, player_id: data.playerId }).select().single();
+            if (error) throw error;
+            setSanctions(prev => prev.map(s => s.id === tempId ? { ...s, id: inserted.id } : s));
+        } catch (error) {
+            sanctionUpdater.handleError(originalState, error, 'add');
+        }
+    };
+    const updateSanction = async (sanction: Sanction) => {
+        const originalState = sanctions;
+        sanctionUpdater.update(sanction);
+        try {
+            const { error } = await getSupabase().from('sanctions').update({ ...sanction, team_id: sanction.teamId, player_id: sanction.playerId }).eq('id', sanction.id);
+            if (error) throw error;
+        } catch(error) {
+            sanctionUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deleteSanction = async (id: string) => {
+        const originalState = sanctions;
+        sanctionUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('sanctions').delete().eq('id', id);
+            if (error) throw error;
+        } catch(error) {
+            sanctionUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+
+    // --- TRANSFERS ---
+    const addTransfer = async (data: Omit<Transfer, 'id'>) => {
+        const tempId = `transfer-${Date.now()}`;
+        const newTransfer = { id: tempId, ...data };
+        const originalState = transfers;
+        transferUpdater.add(newTransfer);
+        setPlayers(prev => prev.map(p => p.id === data.playerId ? {...p, teamId: data.toTeamId} : p)); // Optimistic player team update
+        try {
+            const { data: inserted, error } = await getSupabase().from('transfers').insert({ ...data, player_id: data.playerId, from_team_id: data.fromTeamId, to_team_id: data.toTeamId }).select().single();
+            if (error) throw error;
+            setTransfers(prev => prev.map(t => t.id === tempId ? { ...t, id: inserted.id } : t));
+            // Also update the player's team in the DB
+            await getSupabase().from('players').update({ team_id: data.toTeamId }).eq('id', data.playerId);
+        } catch (error) {
+            transferUpdater.handleError(originalState, error, 'add');
+            // Revert player team update on error
+            setPlayers(prev => prev.map(p => p.id === data.playerId ? {...p, teamId: data.fromTeamId} : p));
+        }
+    };
+    const updateTransfer = async (transfer: Transfer) => {
+        // This is complex because it might involve changing a player's team. For now, a simple update.
+        const originalState = transfers;
+        transferUpdater.update(transfer);
+        try {
+            const { error } = await getSupabase().from('transfers').update({ ...transfer, player_id: transfer.playerId, from_team_id: transfer.fromTeamId, to_team_id: transfer.toTeamId }).eq('id', transfer.id);
+            if (error) throw error;
+        } catch(error) {
+            transferUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deleteTransfer = async (id: string) => {
+        const originalState = transfers;
+        transferUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('transfers').delete().eq('id', id);
+            if (error) throw error;
+        } catch(error) {
+            transferUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+
+    // --- PLAYER REGISTRATIONS ---
+    const addPlayerRegistration = async (data: Omit<PlayerRegistration, 'id'>) => {
+        const tempId = `reg-${Date.now()}`;
+        const newReg = { id: tempId, ...data };
+        const originalState = playerRegistrations;
+        registrationUpdater.add(newReg);
+        try {
+            const { data: inserted, error } = await getSupabase().from('player_registrations').insert({ ...data, player_id: data.playerId, registration_number: data.registrationNumber, valid_from: data.validFrom, valid_until: data.validUntil }).select().single();
+            if (error) throw error;
+            setPlayerRegistrations(prev => prev.map(r => r.id === tempId ? { ...r, id: inserted.id } : r));
+        } catch(error) {
+            registrationUpdater.handleError(originalState, error, 'add');
+        }
+    };
+    const updatePlayerRegistration = async (reg: PlayerRegistration) => {
+        const originalState = playerRegistrations;
+        registrationUpdater.update(reg);
+        try {
+            const { error } = await getSupabase().from('player_registrations').update({ ...reg, player_id: reg.playerId, registration_number: reg.registrationNumber, valid_from: reg.validFrom, valid_until: reg.validUntil }).eq('id', reg.id);
+            if (error) throw error;
+        } catch(error) {
+            registrationUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deletePlayerRegistration = async (id: string) => {
+        const originalState = playerRegistrations;
+        registrationUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('player_registrations').delete().eq('id', id);
+            if (error) throw error;
+        } catch(error) {
+            registrationUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+
+    // --- ARTICLES ---
+    const addArticle = async (data: Omit<Article, 'id' | 'featuredImageUrl' | 'author' | 'createdAt'>, imageFile: File | null) => {
+        const tempId = `art-${Date.now()}`;
+        const newArticle: Article = {
+            id: tempId,
+            featuredImageUrl: imageFile ? URL.createObjectURL(imageFile) : 'https://picsum.photos/seed/article/800/400',
+            author: currentUser?.name || 'Admin',
+            createdAt: new Date().toISOString(),
+            ...data
+        };
+        const originalState = articles;
+        articleUpdater.add(newArticle);
+        try {
+            const { error, data: inserted } = await getSupabase().from('articles').insert({ 
+                competition_id: newArticle.competitionId, title: newArticle.title, content: newArticle.content,
+                featured_image_url: newArticle.featuredImageUrl, author: newArticle.author, status: newArticle.status
+            }).select().single();
+            if (error) throw error;
+            setArticles(prev => prev.map(a => a.id === tempId ? { ...a, id: inserted.id } : a));
+        } catch (error) {
+            articleUpdater.handleError(originalState, error, 'add');
+        }
+    };
+    const updateArticle = async (article: Article, imageFile: File | null) => {
+        let finalArticle = { ...article };
+        if (imageFile) finalArticle.featuredImageUrl = URL.createObjectURL(imageFile);
+        const originalState = articles;
+        articleUpdater.update(finalArticle);
+        try {
+            const { error } = await getSupabase().from('articles').update({ 
+                title: finalArticle.title, content: finalArticle.content,
+                featured_image_url: finalArticle.featuredImageUrl, status: finalArticle.status
+            }).eq('id', finalArticle.id);
+            if (error) throw error;
+        } catch (error) {
+            articleUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deleteArticle = async (id: string) => {
+        const originalState = articles;
+        articleUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('articles').delete().eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            articleUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+
+    // --- GALLERIES ---
+    const addGallery = async (data: Omit<Gallery, 'id'>) => {
+        const tempId = `gal-${Date.now()}`;
+        const newGallery = { id: tempId, ...data };
+        const originalState = galleries;
+        galleryUpdater.add(newGallery);
+        try {
+            const { data: inserted, error } = await getSupabase().from('galleries').insert({ 
+                competition_id: newGallery.competitionId, title: newGallery.title, image_ids: newGallery.imageIds 
+            }).select().single();
+            if (error) throw error;
+            setGalleries(prev => prev.map(g => g.id === tempId ? { ...g, id: inserted.id } : g));
+        } catch (error) {
+            galleryUpdater.handleError(originalState, error, 'add');
+        }
+    };
+    const updateGallery = async (gallery: Gallery) => {
+        const originalState = galleries;
+        galleryUpdater.update(gallery);
+        try {
+            const { error } = await getSupabase().from('galleries').update({ 
+                title: gallery.title, image_ids: gallery.imageIds 
+            }).eq('id', gallery.id);
+            if (error) throw error;
+        } catch (error) {
+            galleryUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deleteGallery = async (id: string) => {
+        const originalState = galleries;
+        galleryUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('galleries').delete().eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            galleryUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+
+    // --- SPONSORS ---
+    const addSponsor = async (data: Omit<Sponsor, 'id'|'logoUrl'>, logoFile?: File | null) => {
+        const tempId = `spn-${Date.now()}`;
+        const newSponsor: Sponsor = {
+            id: tempId,
+            logoUrl: logoFile ? URL.createObjectURL(logoFile) : 'https://picsum.photos/seed/sponsor/200/100',
+            ...data
+        };
+        const originalState = sponsors;
+        sponsorUpdater.add(newSponsor);
+        try {
+            const { data: inserted, error } = await getSupabase().from('sponsors').insert({ 
+                competition_id: newSponsor.competitionId, name: newSponsor.name, 
+                website_url: newSponsor.websiteUrl, logo_url: newSponsor.logoUrl
+            }).select().single();
+            if (error) throw error;
+            setSponsors(prev => prev.map(s => s.id === tempId ? { ...s, id: inserted.id } : s));
+        } catch (error) {
+            sponsorUpdater.handleError(originalState, error, 'add');
+        }
+    };
+    const updateSponsor = async (sponsor: Sponsor, logoFile?: File | null) => {
+        let finalSponsor = { ...sponsor };
+        if (logoFile) finalSponsor.logoUrl = URL.createObjectURL(logoFile);
+        const originalState = sponsors;
+        sponsorUpdater.update(finalSponsor);
+        try {
+            const { error } = await getSupabase().from('sponsors').update({ 
+                name: finalSponsor.name, website_url: finalSponsor.websiteUrl, logo_url: finalSponsor.logoUrl
+            }).eq('id', finalSponsor.id);
+            if (error) throw error;
+        } catch (error) {
+            sponsorUpdater.handleError(originalState, error, 'update');
+        }
+    };
+    const deleteSponsor = async (id: string) => {
+        const originalState = sponsors;
+        sponsorUpdater.delete(id);
+        try {
+            const { error } = await getSupabase().from('sponsors').delete().eq('id', id);
+            if (error) throw error;
+        } catch (error) {
+            sponsorUpdater.handleError(originalState, error, 'delete');
+        }
+    };
+
+    // --- OTHER ---
+    const uploadImage = (competitionId: string, file: File) => {
+        const newImage: MediaImage = { id: `img-${Date.now()}`, competitionId, url: URL.createObjectURL(file) };
+        setMediaImages(prev => [newImage, ...prev]);
+    };
+    const deleteImage = (id: string) => {
+        setMediaImages(prev => prev.filter(img => img.id !== id));
+        setGalleries(prev => prev.map(g => ({...g, imageIds: g.imageIds.filter(imgId => imgId !== id) })));
+    };
+    
+
     const getCompetitionById = useCallback((id: string) => competitions.find(c => c.id === id), [competitions]);
     const getMatchById = useCallback((id: string) => matches.find(m => m.id === id), [matches]);
+    const getArticleById = useCallback((id: string) => articles.find(a => a.id === id), [articles]);
+    const getGalleryById = useCallback((id: string) => galleries.find(g => g.id === id), [galleries]);
 
     const updateMatch = (updatedMatch: Match) => {
         setMatches(prev => prev.map(m => m.id === updatedMatch.id ? updatedMatch : m));
@@ -408,13 +949,14 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     };
     
     const addTeamToCompetition = (competitionId: string, teamId: string) => {
+        const originalCompetitions = competitions;
         setCompetitions(prev => prev.map(c => c.id === competitionId ? { ...c, teamIds: [...c.teamIds, teamId] } : c));
         (async () => {
             const supabase = getSupabase();
             const { error } = await supabase.from('competition_teams').insert({ competition_id: competitionId, team_id: teamId });
             if (error) {
                 console.error('[Supabase] Error adding team to competition:', error);
-                setCompetitions(prev => prev.map(c => c.id === competitionId ? { ...c, teamIds: c.teamIds.filter(id => id !== teamId) } : c));
+                setCompetitions(originalCompetitions);
             }
         })();
     };
@@ -433,13 +975,7 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     };
 
     const inviteUser = (email: string, roleId: string) => {
-        const newUser: User = {
-            id: `user-${Date.now()}`,
-            name: email.split('@')[0],
-            email,
-            roleId,
-            status: 'PENDING'
-        };
+        const newUser: User = { id: `user-${Date.now()}`, name: email.split('@')[0], email, roleId, status: 'PENDING' };
         setUsers(prev => [...prev, newUser]);
         logAction('Invite User', `Invited user: ${email}`);
     };
@@ -472,92 +1008,6 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         logAction('Delete Role', `Deleted role: ${roleName}`);
     };
     
-    const addCounty = (data: { name: string }) => {
-        setCounties(prev => [...prev, { id: `county-${Date.now()}`, ...data }]);
-    };
-    const updateCounty = (county: County) => {
-        setCounties(prev => prev.map(c => c.id === county.id ? county : c));
-    };
-    const deleteCounty = (id: string) => {
-        setCounties(prev => prev.filter(c => c.id !== id));
-    };
-    
-    const addArena = (data: Omit<Arena, 'id'>) => {
-        setArenas(prev => [...prev, { id: `arena-${Date.now()}`, ...data }]);
-    };
-    const updateArena = (arena: Arena) => {
-        setArenas(prev => prev.map(a => a.id === arena.id ? arena : a));
-    };
-    const deleteArena = (id: string) => {
-        setArenas(prev => prev.filter(a => a.id !== id));
-    };
-    
-    const addSport = (data: { name: string; description: string; }) => {
-        setSports(prev => [...prev, { id: `sport-${Date.now()}`, ...data }]);
-    };
-    const updateSport = (sport: Sport) => {
-        setSports(prev => prev.map(s => s.id === sport.id ? sport : s));
-    };
-    const deleteSport = (id: string) => {
-        setSports(prev => prev.filter(s => s.id !== id));
-    };
-
-    const addSanction = (data: Omit<Sanction, 'id'>) => {
-        setSanctions(prev => [...prev, { id: `sanction-${Date.now()}`, ...data }]);
-    };
-    const updateSanction = (sanction: Sanction) => {
-        setSanctions(prev => prev.map(s => s.id === sanction.id ? sanction : s));
-    };
-    const deleteSanction = (id: string) => {
-        setSanctions(prev => prev.filter(s => s.id !== id));
-    };
-
-    const addReferee = (data: Omit<Referee, 'id' | 'photoUrl'> & { photoFile?: File | null }) => {
-        const { photoFile, ...refereeData } = data;
-        const newReferee: Referee = {
-            id: `ref-${Date.now()}`,
-            photoUrl: photoFile ? URL.createObjectURL(photoFile) : `https://avatar.iran.liara.run/username?username=${refereeData.name.replace(/\s/g, '+')}`,
-            ...refereeData
-        };
-        setReferees(prev => [...prev, newReferee]);
-        logAction('Add Referee', `Added referee: ${data.name}`);
-    };
-    
-    const updateReferee = (updatedReferee: Referee, photoFile?: File | null) => {
-        let finalReferee = { ...updatedReferee };
-        if (photoFile) {
-            finalReferee.photoUrl = URL.createObjectURL(photoFile);
-        }
-        setReferees(prev => prev.map(r => r.id === finalReferee.id ? finalReferee : r));
-        logAction('Update Referee', `Updated referee: ${finalReferee.name}`);
-    };
-
-    const deleteReferee = (id: string) => setReferees(prev => prev.filter(r => r.id !== id));
-
-    const addObserver = (data: Omit<Observer, 'id' | 'photoUrl'> & { photoFile?: File | null }) => {
-        const { photoFile, ...observerData } = data;
-        const newObserver: Observer = {
-            id: `obs-${Date.now()}`,
-            photoUrl: photoFile ? URL.createObjectURL(photoFile) : `https://avatar.iran.liara.run/username?username=${observerData.name.replace(/\s/g, '+')}`,
-            ...observerData
-        };
-        setObservers(prev => [...prev, newObserver]);
-        logAction('Add Observer', `Added observer: ${data.name}`);
-    };
-    const updateObserver = (updatedObserver: Observer, photoFile?: File | null) => {
-        let finalObserver = { ...updatedObserver };
-        if (photoFile) {
-            finalObserver.photoUrl = URL.createObjectURL(photoFile);
-        }
-        setObservers(prev => prev.map(o => o.id === finalObserver.id ? finalObserver : o));
-        logAction('Update Observer', `Updated observer: ${finalObserver.name}`);
-    };
-    const deleteObserver = (id: string) => {
-        const observerName = observers.find(o => o.id === id)?.name || 'Unknown';
-        setObservers(prev => prev.filter(o => o.id !== id));
-        logAction('Delete Observer', `Deleted observer: ${observerName}`);
-    };
-
     const getTransfersByPlayerId = (playerId: string) => transfers.filter(t => t.playerId === playerId);
     const getPlayerRegistrationsByPlayerId = (playerId: string) => playerRegistrations.filter(pr => pr.playerId === playerId);
 
@@ -587,9 +1037,9 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
             home.goalsAgainst += match.awayScore; away.goalsAgainst += match.homeScore;
 
             if (match.homeScore > match.awayScore) {
-                home.wins++; away.losses++; home.points += 3;
+                home.wins++; away.losses++; home.points += competition.pointsForWin || 3;
             } else if (match.awayScore > match.homeScore) {
-                away.wins++; home.losses++; away.points += 3;
+                away.wins++; home.losses++; away.points += competition.pointsForWin || 3;
             } else {
                 home.draws++; away.draws++; home.points++; away.points++;
             }
@@ -610,91 +1060,24 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         let date = new Date();
         
         schedule.forEach((round, roundIndex) => {
-            date.setDate(date.getDate() + 7); // Advance by one week for each round
+            date.setDate(date.getDate() + 7);
             round.forEach(pairing => {
                 if (pairing.home.id !== 'bye' && pairing.away.id !== 'bye') {
                     newMatches.push({
                         id: `match-${competitionId}-${pairing.home.id}-${pairing.away.id}`,
-                        competitionId,
-                        homeTeam: pairing.home as Team,
-                        awayTeam: pairing.away as Team,
-                        homeScore: 0,
-                        awayScore: 0,
-                        date: new Date(date).toISOString(),
-                        status: 'Not Started',
-                        events: [],
-                        stage: `Round ${roundIndex + 1}`
+                        competitionId, homeTeam: pairing.home as Team, awayTeam: pairing.away as Team,
+                        homeScore: 0, awayScore: 0, date: new Date(date).toISOString(), status: 'Not Started',
+                        events: [], stage: `Round ${roundIndex + 1}`
                     });
                 }
             });
         });
-        
         setMatches(prev => [...prev.filter(m => m.competitionId !== competitionId), ...newMatches]);
         logAction('Generate Schedule', `Generated schedule for ${competition.name}`);
     };
 
-    const getArticleById = (id: string) => articles.find(a => a.id === id);
-    const addArticle = (data: Omit<Article, 'id' | 'featuredImageUrl' | 'author' | 'createdAt'>, imageFile: File | null) => {
-        const newArticle: Article = {
-            id: `art-${Date.now()}`,
-            featuredImageUrl: imageFile ? URL.createObjectURL(imageFile) : 'https://picsum.photos/seed/article/800/400',
-            author: currentUser?.name || 'Admin',
-            createdAt: new Date().toISOString(),
-            ...data
-        };
-        setArticles(prev => [...prev, newArticle]);
-    };
-    const updateArticle = (article: Article, imageFile: File | null) => {
-        if (imageFile) {
-            article.featuredImageUrl = URL.createObjectURL(imageFile);
-        }
-        setArticles(prev => prev.map(a => a.id === article.id ? article : a));
-    };
-    const deleteArticle = (id: string) => setArticles(prev => prev.filter(a => a.id !== id));
-
-    const uploadImage = (competitionId: string, file: File) => {
-        const newImage: MediaImage = {
-            id: `img-${Date.now()}`,
-            competitionId,
-            url: URL.createObjectURL(file)
-        };
-        setMediaImages(prev => [newImage, ...prev]);
-    };
-    const deleteImage = (id: string) => {
-        setMediaImages(prev => prev.filter(img => img.id !== id));
-        setGalleries(prev => prev.map(g => ({...g, imageIds: g.imageIds.filter(imgId => imgId !== id) })));
-    };
-    
-    const getGalleryById = (id: string) => galleries.find(g => g.id === id);
-    const addGallery = (data: Omit<Gallery, 'id'>) => {
-        const newGallery: Gallery = { id: `gal-${Date.now()}`, ...data };
-        setGalleries(prev => [...prev, newGallery]);
-    };
-    const updateGallery = (gallery: Gallery) => {
-        setGalleries(prev => prev.map(g => g.id === gallery.id ? gallery : g));
-    };
-    const deleteGallery = (id: string) => setGalleries(prev => prev.filter(g => g.id !== id));
-    
-    const addSponsor = (data: Omit<Sponsor, 'id'|'logoUrl'>, logoFile?: File | null) => {
-        const newSponsor: Sponsor = {
-            id: `spn-${Date.now()}`,
-            logoUrl: logoFile ? URL.createObjectURL(logoFile) : 'https://picsum.photos/seed/sponsor/200/100',
-            ...data
-        };
-        setSponsors(prev => [...prev, newSponsor]);
-    };
-    const updateSponsor = (sponsor: Sponsor, logoFile?: File | null) => {
-        if (logoFile) {
-            sponsor.logoUrl = URL.createObjectURL(logoFile);
-        }
-        setSponsors(prev => prev.map(s => s.id === sponsor.id ? sponsor : s));
-    };
-    const deleteSponsor = (id: string) => setSponsors(prev => prev.filter(s => s.id !== id));
-
     const updateCompetitionPublicConfig = (competitionId: string, config: PublicConfig, logoFile?: File | null) => {
-        if (logoFile) {
-            config.logoUrl = URL.createObjectURL(logoFile);
-        }
+        if (logoFile) config.logoUrl = URL.createObjectURL(logoFile);
         setCompetitions(prev => prev.map(c => c.id === competitionId ? {...c, publicConfig: config} : c));
     };
     
@@ -703,11 +1086,8 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
             if (c.id === competitionId && c.publicConfig) {
                 const regs = c.publicConfig.regulations;
                 const regIndex = regs.findIndex(r => r.id === regulation.id);
-                if (regIndex > -1) {
-                    regs[regIndex] = regulation;
-                } else {
-                    regs.push(regulation);
-                }
+                if (regIndex > -1) regs[regIndex] = regulation;
+                else regs.push(regulation);
                 return {...c, publicConfig: {...c.publicConfig, regulations: regs }};
             }
             return c;
@@ -715,31 +1095,8 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     };
 
     const updatePortalConfig = (config: PortalConfig, logoFile?: File | null) => {
-        if (logoFile) {
-            config.logoUrl = URL.createObjectURL(logoFile);
-        }
+        if (logoFile) config.logoUrl = URL.createObjectURL(logoFile);
         setPortalConfig(config);
-    };
-    
-    const addTransfer = (data: Omit<Transfer, 'id'>) => {
-        setTransfers(prev => [...prev, { id: `trn-${Date.now()}`, ...data }]);
-        setPlayers(prev => prev.map(p => p.id === data.playerId ? {...p, teamId: data.toTeamId} : p));
-    };
-    const updateTransfer = (transfer: Transfer) => {
-        setTransfers(prev => prev.map(t => t.id === transfer.id ? transfer : t));
-    };
-    const deleteTransfer = (id: string) => {
-        setTransfers(prev => prev.filter(t => t.id !== id));
-    };
-
-    const addPlayerRegistration = (data: Omit<PlayerRegistration, 'id'>) => {
-        setPlayerRegistrations(prev => [...prev, { id: `reg-${Date.now()}`, ...data }]);
-    };
-    const updatePlayerRegistration = (reg: PlayerRegistration) => {
-        setPlayerRegistrations(prev => prev.map(r => r.id === reg.id ? reg : r));
-    };
-    const deletePlayerRegistration = (id: string) => {
-        setPlayerRegistrations(prev => prev.filter(r => r.id !== id));
     };
     
     const addPlayerToSquad = (playerId: string) => {
@@ -756,11 +1113,7 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
     };
     
     const addComment = (data: { articleId: string, author: string, content: string }) => {
-        const newComment: Comment = {
-            id: `comment-${Date.now()}`,
-            createdAt: new Date().toISOString(),
-            ...data
-        };
+        const newComment: Comment = { id: `comment-${Date.now()}`, createdAt: new Date().toISOString(), ...data };
         const updatedComments = [...comments, newComment];
         setComments(updatedComments);
         try {

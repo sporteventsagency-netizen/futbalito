@@ -192,7 +192,6 @@ export interface Arena {
     id: string;
     name: string;
     location: string;
-    fields: string[];
     county?: string;
     fieldDimensions?: string;
     goalDimensions?: string;

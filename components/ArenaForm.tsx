@@ -66,7 +66,6 @@ const ArenaForm: React.FC<ArenaFormProps> = ({ arena, onSave, onClose }) => {
     onSave({ 
         name, 
         location, 
-        fields: arena?.fields || [],
         county: county || undefined,
         fieldDimensions: fieldDimensions || undefined,
         goalDimensions: goalDimensions || undefined,

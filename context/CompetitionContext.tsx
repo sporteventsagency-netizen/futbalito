@@ -513,10 +513,15 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         arenaUpdater.add(newArena);
         try {
             const payload = {
-                name: data.name, location: data.location, county: data.county,
-                field_dimensions: data.field_dimensions, goal_dimensions: data.goal_dimensions,
-                has_floodlights: data.has_floodlights, spectator_capacity: data.spectator_capacity,
-                homologation_date: data.homologation_date || null, homologation_expiration: data.homologation_expiration || null
+                name: data.name,
+                location: data.location,
+                county: data.county,
+                field_dimensions: data.fieldDimensions,
+                goal_dimensions: data.goalDimensions,
+                has_floodlights: data.hasFloodlights,
+                spectator_capacity: data.spectatorCapacity,
+                homologation_date: data.homologationDate || null,
+                homologation_expiration: data.homologationExpiration || null
             };
             const { data: inserted, error } = await getSupabase().from('arenas').insert(payload).select().single();
             if (error) throw error;
@@ -530,10 +535,15 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         arenaUpdater.update(arena);
         try {
             const payload = {
-                name: data.name, location: data.location, county: data.county,
-                field_dimensions: data.field_dimensions, goal_dimensions: data.goal_dimensions,
-                has_floodlights: data.has_floodlights, spectator_capacity: data.spectator_capacity,
-                homologation_date: data.homologation_date || null, homologation_expiration: data.homologation_expiration || null
+                name: arena.name,
+                location: arena.location,
+                county: arena.county,
+                field_dimensions: arena.fieldDimensions,
+                goal_dimensions: arena.goalDimensions,
+                has_floodlights: arena.hasFloodlights,
+                spectator_capacity: arena.spectatorCapacity,
+                homologation_date: arena.homologationDate || null,
+                homologation_expiration: arena.homologationExpiration || null
             };
             const { data, error } = await getSupabase().from('arenas').update(payload).eq('id', arena.id).select();
             if (error) throw error;

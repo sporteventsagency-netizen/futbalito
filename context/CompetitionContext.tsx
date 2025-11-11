@@ -3,7 +3,8 @@ import {
     Team, Competition, Match, Player, OrganizationSettings, User, Role,
     Invoice, AuditLog, County, Arena, Sanction, Referee, Observer, Sport,
     Article, MediaImage, Gallery, Sponsor, Transfer, PlayerRegistration,
-    Standing, PortalConfig, PublicConfig, NationalTeam, NationalSquadPlayer, Comment
+    Standing, PortalConfig, PublicConfig, NationalTeam, NationalSquadPlayer, Comment,
+    Regulation
 } from '../types.ts';
 import { 
     mockOrganizationSettings,
@@ -93,7 +94,7 @@ interface CompetitionContextType {
     updateSponsor: (sponsor: Sponsor, logoFile?: File | null) => void;
     deleteSponsor: (id: string) => void;
     updateCompetitionPublicConfig: (competitionId: string, config: PublicConfig, logoFile?: File | null) => void;
-    updateCompetitionRegulation: (competitionId: string, regulation: any) => void;
+    updateCompetitionRegulation: (competitionId: string, regulation: Regulation) => void;
     portalConfig: PortalConfig;
     updatePortalConfig: (config: PortalConfig, logoFile?: File | null) => void;
     transfers: Transfer[];
@@ -1122,14 +1123,26 @@ export const CompetitionProvider: React.FC<{ children: ReactNode }> = ({ childre
         setCompetitions(prev => prev.map(c => c.id === competitionId ? {...c, publicConfig: config} : c));
     };
     
-    const updateCompetitionRegulation = (competitionId: string, regulation: any) => {
+    const updateCompetitionRegulation = (competitionId: string, regulation: Regulation) => {
         setCompetitions(prev => prev.map(c => {
             if (c.id === competitionId && c.publicConfig) {
-                const regs = c.publicConfig.regulations;
+                const regs = c.publicConfig.regulations || [];
                 const regIndex = regs.findIndex(r => r.id === regulation.id);
-                if (regIndex > -1) regs[regIndex] = regulation;
-                else regs.push(regulation);
-                return {...c, publicConfig: {...c.publicConfig, regulations: regs }};
+                
+                let updatedRegs;
+                if (regIndex > -1) {
+                    updatedRegs = regs.map((item, index) => index === regIndex ? regulation : item);
+                } else {
+                    updatedRegs = [...regs, regulation];
+                }
+
+                return {
+                    ...c,
+                    publicConfig: {
+                        ...c.publicConfig,
+                        regulations: updatedRegs
+                    }
+                };
             }
             return c;
         }));
